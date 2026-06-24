@@ -1,0 +1,15 @@
+<div class="relative w-full h-dvh overflow-hidden text-fg">
+  <glass-backdrop [accent]="layout.accent()" />
+  <div class="relative z-10 flex flex-col h-full">
+    <div class="hidden md:block">
+      <glass-nav />
+    </div>
+    <div class="flex-1 overflow-auto relative pt-[env(safe-area-inset-top)] md:pt-0">
+      <router-outlet />
+      <div class="h-[calc(96px+env(safe-area-inset-bottom,0))] md:hidden" aria-hidden="true"></div>
+    </div>
+  </div>
+  <mobile-tab-bar class="block md:hidden" />
+  <app-toast />
+  <install-prompt />
+</div>

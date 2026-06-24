@@ -1,0 +1,16 @@
+.poster-gradient {
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.82) 0%,
+    rgba(0, 0, 0, 0.25) 60%,
+    transparent 100%
+  );
+}
+
+.poster-title-shadow {
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9), 0 0 14px rgba(0, 0, 0, 0.6);
+}
+
+.poster-meta-shadow {
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+}

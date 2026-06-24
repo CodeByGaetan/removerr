@@ -1,0 +1,78 @@
+<div
+  class="relative rounded-xl overflow-hidden bg-card shadow-card aspect-[2/3] cursor-pointer transition-[transform,box-shadow] duration-[180ms] ease-[ease] hover:-translate-y-0.5 hover:shadow-card-hover [&.is-hovered]:-translate-y-0.5 [&.is-hovered]:shadow-card-hover group"
+  role="link"
+  tabindex="0"
+  [class.is-hovered]="hovered()"
+  [attr.aria-label]="ariaLabel()"
+  (click)="onCardClick($event)"
+  (keydown)="onCardKeydown($event)">
+
+  <!-- Poster -->
+  @if (posterUrl()) {
+    <img class="w-full h-full object-cover block" [src]="posterUrl()" [alt]="title()" loading="lazy">
+  } @else {
+    <div class="w-full h-full flex items-center justify-center text-[36px] font-semibold text-white/15">{{ title()[0] }}</div>
+  }
+
+  <!-- Top row: requester chip (left) + viewers ring (right) -->
+  <div class="absolute top-2 left-2 right-2 flex items-center justify-between gap-2 z-[2]">
+    <requester-chip [seerr]="seerr()"/>
+    @if (plexUniqueViewers() !== null) {
+      <viewers-ring [viewers]="plexUniqueViewers()!" [total]="totalCounted()"/>
+    }
+  </div>
+
+  <!-- Hover trash button -->
+  <button
+    class="absolute left-1/2 bottom-15.5 z-[3] inline-flex items-center justify-center gap-1.5 px-3 py-1.75 border-0 rounded-[10px] bg-state-danger text-accent-dark font-sans text-[11px] font-semibold tracking-[-0.005em] whitespace-nowrap cursor-pointer pointer-events-none opacity-0 -translate-x-1/2 translate-y-2 shadow-danger-btn transition-[opacity,transform] duration-[180ms] ease-[cubic-bezier(0.4,0,0.2,1)] group-hover:opacity-100 group-hover:pointer-events-auto group-hover:translate-y-0 group-focus-visible:opacity-100 group-focus-visible:pointer-events-auto group-focus-visible:translate-y-0 group-[.is-hovered]:opacity-100 group-[.is-hovered]:pointer-events-auto group-[.is-hovered]:translate-y-0 hover:opacity-85"
+    (click)="onTrash($event)"
+    aria-label="Mettre à la corbeille">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2.2">
+      <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+    </svg>
+    Corbeille
+  </button>
+
+  <!-- Bottom overlay: gradient + title + meta -->
+  <div class="poster-gradient absolute left-0 right-0 bottom-0 px-3.5 pt-10 pb-3 pointer-events-none">
+    <div class="poster-title-shadow text-[13px] font-semibold text-white tracking-[-0.005em] leading-[1.2] overflow-hidden text-ellipsis whitespace-nowrap mb-1">
+      {{ title() }}
+    </div>
+    <div class="poster-meta-shadow flex justify-between items-baseline gap-2 text-[10px] font-mono text-white/78 tracking-[0.3px]">
+      <span class="overflow-hidden text-ellipsis whitespace-nowrap">
+        {{ year() }}
+        @if (seasonsInfo()) {
+          <span class="text-white/35 mx-1.5">·</span>
+          <span>{{ seasonsInfo()!.downloaded }}/{{ seasonsInfo()!.total }} saisons</span>
+        }
+      </span>
+      @if (sizeOnDisk() > 0) {
+        <span class="text-white font-semibold shrink-0">{{ sizeOnDisk() | fileSize }}</span>
+      } @else {
+        <span class="text-white font-semibold shrink-0 inline-flex items-center" title="Non disponible — à télécharger" aria-label="Non disponible">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/>
+            <path d="M12 12v9"/>
+            <path d="m16 16-4 4-4-4"/>
+          </svg>
+        </span>
+      }
+    </div>
+  </div>
+
+</div>
+
+@if (showModal()) {
+  <confirm-modal
+    [title]="'Mettre à la corbeille'"
+    [message]="'Envoyer « ' + title() + ' » à la corbeille ? L\'item sera supprimé définitivement lors de la prochaine purge.'"
+    confirmLabel="Mettre à la corbeille"
+    [loading]="trashing()"
+    (confirmed)="onConfirm()"
+    (cancelled)="onCancel()">
+    <trash-immediate-checkbox [isAdmin]="isAdmin()" [immediate]="immediate()" [disabled]="trashing()" (change)="toggleImmediate($event)" />
+  </confirm-modal>
+}

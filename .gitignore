@@ -1,0 +1,34 @@
+# Secrets
+.env
+*.db
+*.db-wal
+*.db-shm
+config-dev/
+
+# Backend
+backend/target/
+backend/.mvn/
+!backend/.mvn/wrapper/maven-wrapper.properties
+backend/src/main/resources/static/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.code-workspace
+
+# AI tooling
+.claude/
+CLAUDE.md
+
+# Local-only scripts
+build-and-push.sh
+
+# OS
+.DS_Store
+Thumbs.db

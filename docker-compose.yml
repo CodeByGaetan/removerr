@@ -1,0 +1,18 @@
+services:
+  removerr:
+    image: removerr:latest
+    container_name: removerr
+    build:
+      context: .
+      dockerfile: Dockerfile
+    user: "${PUID:-1000}:${PGID:-1000}"
+    environment:
+      TZ: ${TZ:-Europe/Paris}
+      JWT_SECRET: ${JWT_SECRET}
+      REMOVERR_ENC_KEY: ${REMOVERR_ENC_KEY}
+      PURGE_HOUR: ${PURGE_HOUR:-3}
+    volumes:
+      - ${CONFIG_PATH:-./config}:/config
+    ports:
+      - "${PORT:-5055}:8080"
+    restart: unless-stopped

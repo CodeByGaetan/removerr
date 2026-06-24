@@ -1,0 +1,25 @@
+/* Media-type badges — hues specific to the trash list. */
+.badge-movie {
+  background: rgba(74, 158, 255, 0.2);
+  color: #4a9eff;
+}
+.badge-show {
+  background: rgba(82, 209, 115, 0.2);
+  color: #52d173;
+}
+.badge-season {
+  background: rgba(240, 192, 64, 0.2);
+  color: #f0c040;
+}
+
+/* Purge countdown urgency. */
+.purge-normal {
+  color: #fff;
+}
+.purge-soon {
+  color: var(--color-state-warn);
+}
+.purge-critical {
+  color: var(--color-state-critical);
+  text-shadow: 0 0 14px color-mix(in srgb, var(--color-state-critical) 53%, transparent);
+}

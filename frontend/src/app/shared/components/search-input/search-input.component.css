@@ -1,0 +1,44 @@
+:host {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  max-width: 340px;
+}
+
+.search-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 99px;
+  font-size: 13px;
+}
+
+.search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #f5f5f7;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.search-input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.clear-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.45);
+  padding: 0;
+  display: flex;
+  align-items: center;
+  transition: color 100ms ease;
+}
+
+.clear-btn:hover {
+  color: rgba(255, 255, 255, 0.8);
+}

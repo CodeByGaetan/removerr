@@ -1,0 +1,9 @@
+<span class="inline-flex items-center gap-1.75 px-2.75 py-1.25 rounded-md text-[10px] font-mono font-semibold tracking-[0.8px] uppercase whitespace-nowrap"
+      [style.color]="color()"
+      [style.background]="bg()"
+      [style.border]="'1px solid ' + border()">
+  <span class="w-1.5 h-1.5 rounded-full"
+        [style.background]="color()"
+        [style.box-shadow]="glow()"></span>
+  {{ label() }}
+</span>

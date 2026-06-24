@@ -1,0 +1,220 @@
+<!--
+  Carousel: two pages (list + detail) side-by-side. Sliding between them via
+  transform on the wrapper preserves each page's native scroll position.
+-->
+<div
+  class="flex w-[200%] h-full duration-260 ease-[cubic-bezier(0.32,0.72,0,1)]"
+  [class.transition-transform]="mounted()"
+  [style.transform]="selectedId() ? 'translateX(-50%)' : 'translateX(0)'"
+  (transitionend)="onCarouselTransitionEnd($event)"
+>
+  <!-- Page 1: list -->
+  <div class="w-1/2 h-full overflow-y-auto">
+    <!-- Header -->
+    <div
+      class="flex flex-col gap-3.5 px-5 pt-5 pb-4 md:flex-row md:items-end md:justify-between md:px-12 md:pt-10 md:pb-6"
+    >
+      <div class="flex items-baseline gap-4">
+        <h1
+          class="text-[32px] md:text-5xl font-semibold m-0 tracking-tight text-shadow-title"
+        >
+          {{ isMoviesTab() ? 'Films' : 'Séries' }}
+        </h1>
+        @if (!activeLoading() && !activeError()) {
+          <span class="text-sm text-white/70 font-mono">
+            {{ totalItems().length }} · {{ totalSize() | fileSize }}
+          </span>
+        }
+      </div>
+
+      <toggle-segmented
+        class="w-full md:w-auto"
+        [options]="tabs"
+        [value]="isMoviesTab() ? 'Films' : 'Séries'"
+        (valueChange)="onTabChange($event)"
+      />
+    </div>
+
+    <!-- Filter bar -->
+    @if (!activeLoading() && !activeError()) {
+      <div class="px-5 pb-4 md:px-12 md:pb-7">
+        <!-- Mobile: search + Filtres button on one row -->
+        <div class="flex items-center gap-2 md:hidden">
+          <search-input
+            [placeholder]="isMoviesTab() ? 'Rechercher un titre…' : 'Rechercher une série…'"
+            [value]="searchQuery()"
+            (valueChange)="searchQuery.set($event)"
+          />
+          <button
+            type="button"
+            (click)="showFilters.set(!showFilters())"
+            class="relative inline-flex items-center gap-1.5 px-3.5 py-2.75 rounded-full glass text-[13px] font-medium text-white whitespace-nowrap"
+          >
+            <svg
+              width="13"
+              height="13"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M3 6h18M6 12h12M10 18h4" />
+            </svg>
+            Filtres
+            @if (hasActiveFilters()) {
+              <span
+                class="absolute -top-0.75 -right-0.75 w-2 h-2 rounded-full bg-accent border-2 border-base"
+              ></span>
+            }
+          </button>
+        </div>
+
+        <!-- Mobile: collapsible filter pills -->
+        @if (showFilters()) {
+          <div class="md:hidden flex flex-wrap items-center gap-2 mt-3">
+            <glass-pill
+              label="Tri"
+              [options]="sortOptions"
+              [value]="sortBy()"
+              [iconFor]="sortIconFor"
+              (optionClick)="onSortClick($event)"
+            />
+            <glass-pill
+              label="Vu"
+              [options]="watchedOptions"
+              [value]="watchedFilter()"
+              (valueChange)="setWatchedFilter($event)"
+            />
+            <glass-pill
+              label="Dispo"
+              [options]="availabilityOptions"
+              [value]="availabilityFilter()"
+              (valueChange)="setAvailabilityFilter($event)"
+            />
+            <div class="flex-1"></div>
+            <div class="text-xs font-mono text-white/65 px-3 py-2">
+              {{ filteredCount() }} / {{ totalItems().length }}
+            </div>
+          </div>
+        }
+
+        <!-- Desktop: full inline filter row -->
+        <div class="hidden md:flex items-center gap-2.5 flex-wrap">
+          <search-input
+            [placeholder]="isMoviesTab() ? 'Rechercher un titre…' : 'Rechercher une série…'"
+            [value]="searchQuery()"
+            (valueChange)="searchQuery.set($event)"
+          />
+          <glass-pill
+            label="Tri"
+            [options]="sortOptions"
+            [value]="sortBy()"
+            [iconFor]="sortIconFor"
+            (optionClick)="onSortClick($event)"
+          />
+          <glass-pill
+            label="Vu"
+            [options]="watchedOptions"
+            [value]="watchedFilter()"
+            (valueChange)="setWatchedFilter($event)"
+          />
+          <glass-pill
+            label="Dispo"
+            [options]="availabilityOptions"
+            [value]="availabilityFilter()"
+            (valueChange)="setAvailabilityFilter($event)"
+          />
+          <div class="flex-1"></div>
+          <div class="text-xs font-mono text-white/65 px-3 py-2">
+            {{ filteredCount() }} / {{ totalItems().length }}
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Grid area -->
+    <div class="px-5 md:px-12 md:pb-12">
+      <!-- Loading -->
+      @if (activeLoading()) {
+        <div class="grid grid-cols-2 gap-3 md:grid-cols-6 md:gap-5">
+          @for (s of skeletons; track $index) {
+            <div
+              class="rounded-xl bg-card aspect-2/3 animate-[pulse_1.5s_ease-in-out_infinite]"
+            ></div>
+          }
+        </div>
+      }
+
+      <!-- Error -->
+      @if (activeError()) {
+        <div class="flex flex-col items-center justify-center py-20 gap-4">
+          <p class="text-[13px] text-white/60 font-mono">{{ activeError() }}</p>
+          <button
+            (click)="retry()"
+            class="px-5 py-2.5 rounded-[10px] bg-white/8 border border-white/16 text-white font-sans text-[13px] cursor-pointer"
+          >
+            Réessayer
+          </button>
+        </div>
+      }
+
+      <!-- Movies grid -->
+      @if (!activeLoading() && !activeError() && isMoviesTab()) {
+        @if (filteredMovies().length === 0) {
+          <div class="flex flex-col items-center py-20 gap-3.5">
+            <p class="text-[13px] text-white/50 font-mono m-0">Aucun résultat</p>
+            @if (hasActiveFilters()) {
+              <button
+                (click)="resetFilters()"
+                class="px-4.5 py-2 rounded-[10px] bg-white/8 border border-white/16 text-white font-sans text-[13px] cursor-pointer"
+              >
+                Réinitialiser les filtres
+              </button>
+            }
+          </div>
+        } @else {
+          <div class="grid grid-cols-2 gap-3 md:grid-cols-6 md:gap-5">
+            @for (movie of filteredMovies(); track movie.radarrId) {
+              <library-card [movie]="movie" (open)="openDetail($event)" />
+            }
+          </div>
+        }
+      }
+
+      <!-- Shows grid -->
+      @if (!activeLoading() && !activeError() && !isMoviesTab()) {
+        @if (filteredShows().length === 0) {
+          <div class="flex flex-col items-center py-20 gap-3.5">
+            <p class="text-[13px] text-white/50 font-mono m-0">Aucun résultat</p>
+            @if (hasActiveFilters()) {
+              <button
+                (click)="resetFilters()"
+                class="px-4.5 py-2 rounded-[10px] bg-white/8 border border-white/16 text-white font-sans text-[13px] cursor-pointer"
+              >
+                Réinitialiser les filtres
+              </button>
+            }
+          </div>
+        } @else {
+          <div class="grid grid-cols-2 gap-3 md:grid-cols-6 md:gap-5">
+            @for (show of filteredShows(); track show.sonarrId) {
+              <library-card [show]="show" (open)="openDetail($event)" />
+            }
+          </div>
+        }
+      }
+    </div>
+
+    <!-- Mobile tab-bar spacer -->
+    <div class="h-[calc(96px+env(safe-area-inset-bottom,0))] md:hidden" aria-hidden="true"></div>
+  </div>
+
+  <!-- Page 2: detail -->
+  <div class="w-1/2 h-full overflow-y-auto">
+    @if (displayedId()) {
+      <app-library-detail [id]="displayedId()!" (close)="closeDetail()" />
+    }
+    <!-- Mobile tab-bar spacer -->
+    <div class="h-[calc(96px+env(safe-area-inset-bottom,0))] md:hidden" aria-hidden="true"></div>
+  </div>
+</div>

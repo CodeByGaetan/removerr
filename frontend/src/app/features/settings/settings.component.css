@@ -1,0 +1,25 @@
+/* Connection-test status chip: all colors derive from a single --status token
+   set by the modifier class, so the component logic only picks a state. */
+.status-chip {
+  color: var(--status);
+  background: color-mix(in srgb, var(--status) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--status) 33%, transparent);
+}
+
+.status-chip .status-dot {
+  background: var(--status);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--status) 67%, transparent);
+}
+
+.status-ok {
+  --status: var(--color-state-ok);
+}
+.status-warn {
+  --status: var(--color-state-warn);
+}
+.status-down {
+  --status: var(--color-state-critical);
+}
+.status-unknown {
+  --status: rgba(255, 255, 255, 0.55);
+}

@@ -1,0 +1,63 @@
+@if (visible()) {
+  <!-- Desktop: pill bottom-right -->
+  <div
+    class="hidden md:flex fixed bottom-6 right-6 z-50 items-center gap-3 glass px-4 py-3 rounded-[14px]"
+  >
+    <img src="logo.png" class="h-10" alt="Removerr" />
+    <div class="min-w-0">
+      <div class="text-[13px] font-semibold text-white leading-none mb-0.5">Installer Removerr</div>
+      <div class="text-[11px] text-white/55 font-mono">Accès rapide depuis votre bureau</div>
+    </div>
+    <button
+      (click)="install()"
+      class="px-3.5 py-1.5 rounded-lg cursor-pointer bg-accent border-0 text-accent-dark font-sans text-[12px] font-semibold whitespace-nowrap"
+    >
+      Installer
+    </button>
+    <button
+      (click)="dismiss()"
+      class="w-6 h-6 rounded-full bg-white/8 border-0 text-white/50 cursor-pointer flex items-center justify-center p-0 hover:text-white/80 transition-colors"
+    >
+      <svg
+        width="10"
+        height="10"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+      >
+        <line x1="18" y1="6" x2="6" y2="18" />
+        <line x1="6" y1="6" x2="18" y2="18" />
+      </svg>
+    </button>
+  </div>
+
+  <!-- Mobile: bottom-sheet -->
+  <div
+    class="flex md:hidden fixed bottom-0 left-0 right-0 z-50 glass-strong px-5 pt-5 pb-[calc(20px+env(safe-area-inset-bottom,0))]"
+  >
+    <div class="flex items-start gap-3 w-full">
+      <img src="logo.png" class="h-10" alt="Removerr" />
+      <div class="flex-1 min-w-0">
+        <div class="text-[14px] font-semibold text-white mb-0.5">Installer Removerr</div>
+        <div class="text-[12px] text-white/55 font-mono mb-4">
+          Ajoutez l'app à votre écran d'accueil
+        </div>
+        <div class="flex gap-2">
+          <button
+            (click)="install()"
+            class="flex-1 py-2.5 rounded-[10px] cursor-pointer bg-accent border-0 text-accent-dark font-sans text-[13px] font-semibold"
+          >
+            Installer
+          </button>
+          <button
+            (click)="dismiss()"
+            class="px-4 py-2.5 rounded-[10px] cursor-pointer bg-white/8 border border-white/12 text-white/70 font-sans text-[13px] font-medium"
+          >
+            Plus tard
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}

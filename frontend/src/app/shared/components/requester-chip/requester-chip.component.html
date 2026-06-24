@@ -1,0 +1,6 @@
+@if (seerr()) {
+  <div class="inline-flex items-center gap-1.25 py-0.75 pr-2.25 pl-0.75 rounded-full bg-chip border border-white/8 text-[10px] text-white font-medium whitespace-nowrap">
+    <user-avatar [name]="seerr()!.requestedByUsername" [size]="14"/>
+    {{ seerr()!.requestedByUsername }}
+  </div>
+}

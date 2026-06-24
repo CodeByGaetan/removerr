@@ -1,0 +1,21 @@
+<div class="fixed top-5 right-5 z-2000 flex flex-col gap-2 pointer-events-none">
+  @for (t of toast.toasts(); track t.id) {
+    <div class="flex items-center gap-2.5 px-4 py-3 rounded-[11px] text-[13px] font-medium backdrop-blur-md animate-[toast-in_200ms_ease]"
+         [style.background]="t.type === 'success' ? 'rgba(22,180,80,0.18)' : 'rgba(255,60,60,0.18)'"
+         [style.border]="t.type === 'success' ? '1px solid rgba(22,180,80,0.35)' : '1px solid rgba(255,60,60,0.35)'"
+         [style.color]="t.type === 'success' ? '#4ade80' : '#f87171'">
+      @if (t.type === 'success') {
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.5">
+          <path d="M20 6L9 17l-5-5"/>
+        </svg>
+      } @else {
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.5">
+          <path d="M18 6L6 18M6 6l12 12"/>
+        </svg>
+      }
+      {{ t.message }}
+    </div>
+  }
+</div>

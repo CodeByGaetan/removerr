@@ -1,0 +1,32 @@
+:host {
+  display: inline-block;
+}
+
+.toggle-wrapper {
+  display: flex;
+  width: 100%;
+  padding: 3px;
+  border-radius: 99px;
+}
+
+.segment {
+  flex: 1;
+  text-align: center;
+  padding: 8px 18px;
+  border: 0;
+  border-radius: 99px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.75);
+  background: transparent;
+  user-select: none;
+  transition: color 120ms ease, background 120ms ease, box-shadow 120ms ease;
+}
+
+.segment-active {
+  color: #0a0612;
+  background: #fff;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.2);
+}

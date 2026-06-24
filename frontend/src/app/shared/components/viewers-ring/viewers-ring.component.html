@@ -1,0 +1,33 @@
+<div class="relative size-7.5 rounded-full bg-chip flex items-center justify-center shrink-0">
+  <svg
+    width="30"
+    height="30"
+    viewBox="0 0 30 30"
+    class="absolute inset-0 -rotate-90"
+  >
+    <circle
+      cx="15"
+      cy="15"
+      [attr.r]="r"
+      fill="none"
+      stroke="rgba(255,255,255,0.12)"
+      stroke-width="2"
+    />
+    @if (!noViewers()) {
+      <circle
+        cx="15"
+        cy="15"
+        [attr.r]="r"
+        fill="none"
+        [style.stroke]="ringColor()"
+        stroke-width="2"
+        stroke-linecap="round"
+        [attr.stroke-dasharray]="arc() + ' ' + circumference"
+      />
+    }
+  </svg>
+
+  <div class="relative z-10 font-mono text-[9px] font-semibold tracking-[0.2px] leading-none text-white">
+    <span>{{ viewers() }}</span><span class="text-white/45">/{{ total() }}</span>
+  </div>
+</div>

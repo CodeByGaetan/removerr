@@ -1,0 +1,42 @@
+<div class="relative inline-block">
+  <div
+    class="glass flex items-center gap-2 px-4 py-2.25 rounded-full text-[13px] cursor-pointer select-none"
+    (click)="toggle()"
+  >
+    <span class="text-white/65">{{ label() }}</span>
+    <span class="text-white font-medium">
+      {{ activeLabel() }}
+      @if (icon(value()); as ic) {
+        <span class="inline-block ml-1 text-white/65 font-normal">{{ ic }}</span>
+      }
+    </span>
+    <svg
+      class="transition-transform duration-120"
+      [class.rotate-180]="isOpen()"
+      width="10"
+      height="10"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="rgba(255,255,255,0.6)"
+      stroke-width="2"
+    >
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  </div>
+
+  @if (isOpen()) {
+    <div class="glass absolute top-[calc(100%+6px)] left-0 min-w-full rounded-xl p-1 z-100">
+      @for (opt of options(); track opt.value) {
+        <div
+          class="flex items-center justify-between gap-3 px-3.5 py-2 rounded-lg text-[13px] cursor-pointer whitespace-nowrap transition-colors duration-100 hover:bg-white/10 {{ opt.value === value() ? 'text-white font-medium bg-white/12' : 'text-white/80' }}"
+          (click)="select(opt)"
+        >
+          <span>{{ opt.label }}</span>
+          @if (icon(opt.value); as ic) {
+            <span class="inline-block ml-1 text-white/65 font-normal">{{ ic }}</span>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>

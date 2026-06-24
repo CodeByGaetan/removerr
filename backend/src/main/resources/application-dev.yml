@@ -1,0 +1,20 @@
+spring:
+  datasource:
+    url: jdbc:sqlite:./removerr-dev.db
+
+  jpa:
+    show-sql: false
+
+# Dev-only defaults — never use these values in production
+removerr:
+  jwt:
+    secret: dev-jwt-secret-not-for-production-use-at-all!!
+  encryption:
+    key: ZGV2LWVuYy1rZXktbm90LWZvci1wcm9kdWN0aW9uISE=
+  cookie:
+    secure: false
+
+logging:
+  level:
+    com.removerr: INFO
+    org.springframework.web: INFO

@@ -1,0 +1,196 @@
+<div class="px-5 pt-5 md:px-12 md:pt-10 md:pb-12">
+  <!-- Header -->
+  <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between mb-7">
+    <div class="flex items-baseline gap-4">
+      <h1 class="text-[32px] md:text-5xl font-semibold m-0 tracking-tight">Corbeille</h1>
+      @if (!loading()) {
+        <span class="text-[14px] text-white/70 font-mono">
+          {{ count() }} items · {{ totalSize() | fileSize }}
+        </span>
+      }
+    </div>
+
+    @if (count() > 0 && isAdmin()) {
+      <button
+        (click)="onPurge()"
+        class="w-full md:w-auto inline-flex items-center justify-center gap-2.5 px-5.5 py-3 rounded-[11px] cursor-pointer border-0 bg-state-danger text-accent-dark font-sans text-[13px] font-semibold shadow-danger-btn"
+      >
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.2"
+        >
+          <path
+            d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"
+          />
+        </svg>
+        Purger maintenant
+      </button>
+    }
+  </div>
+
+  <!-- Info strip -->
+  @if (count() > 0) {
+    <div
+      class="flex items-center gap-3.5 px-4.5 py-3 rounded-xl mb-6 bg-chip border border-white/8 text-[12px] text-white/75"
+    >
+      <span
+        class="w-1.5 h-1.5 rounded-full bg-accent shrink-0 shadow-accent-dot"
+      ></span>
+      <span>
+        Les items sont supprimés définitivement à leur date de purge. Restaurer un item annule la
+        suppression.
+      </span>
+    </div>
+  }
+
+  <!-- Loading -->
+  @if (loading()) {
+    <div class="flex justify-center py-20 text-white/35 text-[13px] font-mono">Chargement…</div>
+  }
+
+  <!-- Empty state -->
+  @if (!loading() && count() === 0) {
+    <div class="flex flex-col items-center justify-center py-24 gap-4">
+      <svg
+        width="48"
+        height="48"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="rgba(255,255,255,0.15)"
+        stroke-width="1.5"
+      >
+        <path
+          d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"
+        />
+      </svg>
+      <p class="text-[13px] text-white/35 font-mono m-0">La corbeille est vide</p>
+    </div>
+  }
+
+  <!-- List -->
+  @if (!loading() && count() > 0) {
+    <div class="flex flex-col gap-2.5">
+      @for (item of items(); track item.id) {
+        <div
+          class="grid grid-cols-[64px_1fr] md:grid-cols-[72px_1fr_auto] gap-x-3 md:gap-x-5 gap-y-3 md:gap-y-0 items-start md:items-center bg-card border border-white/6 rounded-xl p-3 md:p-4"
+        >
+          <!-- Poster thumbnail -->
+          @if (item.posterUrl) {
+            <img
+              [src]="item.posterUrl"
+              [alt]="item.title"
+              class="w-full aspect-2/3 object-cover rounded-[7px] block"
+            />
+          } @else {
+            <div
+              class="w-full aspect-2/3 rounded-[7px] bg-white/5 flex items-center justify-center text-[20px] text-white/15"
+            >
+              {{ item.title[0] }}
+            </div>
+          }
+
+          <!-- Info -->
+          <div class="min-w-0">
+            <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+              <span
+                class="text-[10px] font-mono tracking-[1px] uppercase px-2 py-0.75 rounded-[5px] font-semibold {{ badgeClass(item.mediaType) }}"
+              >
+                {{ badgeLabel(item.mediaType) }}
+              </span>
+              @if (item.year) {
+                <span class="text-[11px] font-mono text-white/40">
+                  {{ item.year }}
+                </span>
+              }
+            </div>
+
+            <div
+              class="text-[15px] font-semibold text-white tracking-[-0.01em] mb-1.5 overflow-hidden text-ellipsis whitespace-nowrap"
+            >
+              {{ item.title }}
+            </div>
+
+            <div class="flex flex-wrap gap-3 text-[11px] font-mono text-white/45">
+              <span>{{ item.sizeBytes | fileSize }}</span>
+              <span>mis en corbeille {{ item.trashedAt | relativeDate }}</span>
+              @if (item.seerrRequestedBy) {
+                <span>demandé par {{ item.seerrRequestedBy }}</span>
+              }
+            </div>
+          </div>
+
+          <!-- Actions: J-X countdown (with vertical borders desktop) + restore -->
+          <div
+            class="col-span-2 md:col-span-1 flex items-center justify-between md:justify-end gap-3 md:gap-4"
+          >
+            <!-- J-X cell -->
+            <div
+              class="text-center min-w-16 md:px-4.5 md:py-1 md:border-l md:border-r md:border-white/8"
+            >
+              <div class="text-[9px] font-mono text-white/50 tracking-[1.5px] uppercase mb-0.5">
+                Purge
+              </div>
+              <div
+                class="text-[28px] md:text-[30px] font-semibold font-mono leading-none tracking-[-0.03em] {{ urgencyClass(item.purgeAt) }}"
+              >
+                J-{{ daysLeft(item.purgeAt) }}
+              </div>
+            </div>
+
+            <!-- Restore button : icon-only round on mobile, icon + label on desktop -->
+            <button
+              (click)="onRestore(item)"
+              aria-label="Restaurer"
+              class="inline-flex items-center justify-center cursor-pointer whitespace-nowrap w-10 h-10 md:w-auto md:h-auto md:gap-2 md:px-4 md:py-2.25 rounded-full md:rounded-[10px] bg-white/6 md:bg-transparent border border-white/12 md:border-white/16 text-white/85 md:text-white font-sans text-[12px] font-medium"
+            >
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+                <path d="M3 3v5h5" />
+              </svg>
+              <span class="hidden md:inline">Restaurer</span>
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>
+
+<!-- Restore confirm modal -->
+@if (restoreTarget()) {
+  <confirm-modal
+    title="Restaurer"
+    [message]="
+      'Restaurer « ' + restoreTarget()!.title + ' » ? L\'item sera retiré de la corbeille.'
+    "
+    confirmLabel="Restaurer"
+    [loading]="restoring()"
+    (confirmed)="onConfirmRestore()"
+    (cancelled)="restoreTarget.set(null)"
+  />
+}
+
+<!-- Purge confirm modal -->
+@if (confirmingPurge()) {
+  <confirm-modal
+    title="Purger la corbeille"
+    [message]="
+      'Cette action est irréversible. ' + count() + ' item(s) seront supprimés définitivement.'
+    "
+    confirmLabel="Purger"
+    [loading]="purging()"
+    (confirmed)="onConfirmPurge()"
+    (cancelled)="confirmingPurge.set(false)"
+  />
+}

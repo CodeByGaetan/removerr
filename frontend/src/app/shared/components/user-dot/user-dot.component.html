@@ -1,0 +1,7 @@
+<div class="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold leading-none select-none"
+     [style.background]="background()"
+     [style.border]="watched() ? '1px solid rgba(255,255,255,0.18)' : '1px dashed rgba(255,255,255,0.16)'"
+     [style.color]="watched() ? '#fff' : 'rgba(255,255,255,0.35)'"
+     [title]="'@' + user().name + ' — ' + (watched() ? 'a vu' : 'pas encore vu')">
+  {{ initial() }}
+</div>

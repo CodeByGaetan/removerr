@@ -1,0 +1,9 @@
+<div class="px-4.5 py-3 rounded-[11px] bg-white/4 border border-white/8 min-w-30">
+  <div class="text-[10px] tracking-[1.4px] uppercase text-white/55 font-mono mb-1 whitespace-nowrap">
+    {{ label() }}
+  </div>
+  <div class="text-[20px] font-semibold font-mono tracking-[-0.01em] leading-[1.1] whitespace-nowrap"
+       [style.color]="accent() ?? '#fff'">
+    {{ value() }}
+  </div>
+</div>

@@ -1,0 +1,16 @@
+@if (isAdmin()) {
+  <label
+    class="flex items-start gap-3 -mt-1 mb-6.5 p-3 rounded-[10px] bg-white/4 border border-white/8 cursor-pointer select-none"
+  >
+    <input
+      type="checkbox"
+      [checked]="immediate()"
+      (change)="onChange($event)"
+      [disabled]="disabled()"
+      class="mt-0.5 w-4 h-4 accent-state-danger cursor-pointer"
+    />
+    <span class="flex-1 text-[12.5px] text-white/90 font-medium leading-normal">
+      Supprimer dès la prochaine purge
+    </span>
+  </label>
+}

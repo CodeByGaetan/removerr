@@ -1,0 +1,49 @@
+<nav class="glass mx-6 mt-5 flex items-center gap-5 px-5 py-3 rounded-[18px]">
+
+  <!-- Logo -->
+  <img src="logo.png" alt="Removerr Logo" class="h-10">
+
+  <!-- Nav links -->
+  <div class="flex gap-1">
+    @for (item of navItems; track item.path) {
+      <a [routerLink]="item.path" routerLinkActive #rla="routerLinkActive"
+         class="flex items-center gap-2 px-3.5 py-1.75 rounded-full text-[13px] font-medium no-underline transition-colors"
+         [style.color]="rla.isActive ? '#fff' : 'rgba(255,255,255,0.7)'"
+         [style.background]="rla.isActive ? 'rgba(255,255,255,0.18)' : 'transparent'"
+         [style.border]="rla.isActive ? '1px solid rgba(255,255,255,0.2)' : '1px solid transparent'"
+         [style.box-shadow]="rla.isActive ? 'inset 0 1px 0 rgba(255,255,255,0.25)' : 'none'">
+        {{ item.label }}
+        @if (item.path === '/trash' && trashCount() > 0) {
+          <span class="min-w-4.5 h-4.5 rounded-[9px] bg-accent text-accent-dark text-[10px] font-bold font-mono flex items-center justify-center px-1.25 leading-none">
+            {{ trashCount() }}
+          </span>
+        }
+      </a>
+    }
+  </div>
+
+  <div class="flex-1"></div>
+
+  <!-- User + logout -->
+  <div class="flex items-center gap-2">
+    <div class="flex items-center gap-2.5 py-1 pr-3.5 pl-1 rounded-full bg-white/8 border border-white/12">
+      <div class="w-6.5 h-6.5 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0 bg-[linear-gradient(135deg,var(--color-accent),var(--color-blob-blue))]">
+        {{ userInitial() }}
+      </div>
+      <span class="text-[13px] text-white">{{ userName() }}</span>
+    </div>
+
+    <button
+      (click)="logout()"
+      title="Se déconnecter"
+      class="w-8 h-8 rounded-full bg-white/6 border border-white/12 text-white/60 cursor-pointer flex items-center justify-center p-0 hover:text-white/90 transition-colors"
+    >
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+        <polyline points="16 17 21 12 16 7"/>
+        <line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+    </button>
+  </div>
+
+</nav>

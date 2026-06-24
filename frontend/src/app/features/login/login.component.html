@@ -1,0 +1,129 @@
+<div class="relative w-full h-dvh overflow-hidden text-fg">
+  <glass-backdrop />
+
+  <div class="relative z-10 h-full flex items-center justify-center p-12">
+    <!-- Card -->
+    <div class="glass w-115 max-w-full px-11 pt-11 pb-9 rounded-3xl">
+      <!-- Logo -->
+      <div class="flex justify-center mb-5">
+        <img src="logo.png" alt="Removerr Logo" class="h-24" />
+      </div>
+
+      <!-- State: idle -->
+      @if (state() === 'idle') {
+        <h1
+          class="m-0 mb-3 text-center text-[26px] font-semibold tracking-[-0.02em] leading-[1.2] text-shadow-title"
+        >
+          Se connecter à Removerr
+        </h1>
+        <p class="m-0 mb-8 text-center text-[13px] leading-normal text-white/70">
+          Removerr utilise l'authentification Plex. Aucun mot de passe n'est stocké sur ce serveur.
+        </p>
+        <button
+          (click)="startLogin()"
+          [disabled]="loading()"
+          class="w-full px-4.5 py-3.5 border-0 rounded-xl cursor-pointer bg-accent text-accent-dark font-semibold text-sm tracking-[-0.005em] flex items-center justify-center gap-2 shadow-accent-btn transition-opacity"
+          [style.opacity]="loading() ? '0.6' : '1'"
+        >
+          @if (loading()) {
+            Connexion en cours…
+          } @else {
+            Se connecter avec Plex
+            <svg
+              width="13"
+              height="13"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+            >
+              <path d="M7 17 17 7" />
+              <path d="M7 7h10v10" />
+            </svg>
+          }
+        </button>
+      }
+
+      <!-- State: pending -->
+      @if (state() === 'pending') {
+        <div class="text-center text-[11px] tracking-[2px] uppercase text-white/65 font-mono mb-3">
+          Connexion à Plex
+        </div>
+        <h1
+          class="m-0 mb-3 text-center text-[26px] font-semibold tracking-[-0.02em] leading-[1.2] text-shadow-title"
+        >
+          Autorisez Removerr sur Plex
+        </h1>
+        <p class="m-0 mb-8 text-center text-[13px] leading-normal text-white/70">
+          Plex s'est ouvert dans un nouvel onglet. Validez l'autorisation pour accorder à Removerr
+          l'accès à votre médiathèque.
+        </p>
+
+        <!-- Timer -->
+        <div class="text-center text-[11px] font-mono text-white/55 tracking-[0.4px] mb-8">
+          Expire dans <span class="text-white">{{ timeDisplay() }}</span>
+        </div>
+
+        <!-- CTA: re-open Plex -->
+        <button
+          (click)="openPlex()"
+          class="w-full px-4.5 py-3.5 border-0 rounded-xl cursor-pointer bg-accent text-accent-dark font-semibold text-sm tracking-[-0.005em] flex items-center justify-center gap-2 shadow-accent-btn"
+        >
+          Ouvrir Plex pour autoriser
+          <svg
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+          >
+            <path d="M7 17 17 7" />
+            <path d="M7 7h10v10" />
+          </svg>
+        </button>
+
+        <!-- Pulse status -->
+        <div
+          class="flex items-center justify-center gap-2 mt-6 text-xs text-white/65 font-mono tracking-[0.3px]"
+        >
+          <span
+            class="w-1.5 h-1.5 rounded-full bg-accent inline-block shadow-accent-dot animate-[pulse_1.4s_ease-in-out_infinite]"
+          ></span>
+          En attente de validation…
+        </div>
+      }
+
+      <!-- State: expired -->
+      @if (state() === 'expired') {
+        <div
+          class="text-center text-[11px] tracking-[2px] uppercase font-mono mb-3 text-red-500/90"
+        >
+          Code expiré
+        </div>
+        <h1
+          class="m-0 mb-3 text-center text-[26px] font-semibold tracking-[-0.02em] leading-[1.2] text-shadow-title"
+        >
+          Votre code a expiré
+        </h1>
+        <p class="m-0 mb-8 text-center text-[13px] leading-normal text-white/70">
+          Le délai de connexion a été dépassé. Lancez une nouvelle tentative pour obtenir un nouveau
+          code.
+        </p>
+        <button
+          (click)="retry()"
+          class="w-full px-4.5 py-3.5 border border-white/20 rounded-xl cursor-pointer bg-white/8 text-white font-semibold text-sm tracking-[-0.005em] flex items-center justify-center"
+        >
+          Réessayer
+        </button>
+      }
+    </div>
+
+    <!-- Footer -->
+    <div
+      class="absolute bottom-8 left-0 right-0 text-center text-[11px] font-mono tracking-[0.4px] text-white/45"
+    >
+      Removerr · {{ version }}
+    </div>
+  </div>
+</div>

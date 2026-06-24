@@ -1,0 +1,290 @@
+<div class="px-5 pt-5 md:px-12 md:pt-10 md:pb-12">
+  <!-- Header -->
+  <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between mb-9">
+    <h1 class="text-[32px] md:text-5xl font-semibold m-0 tracking-tight">Paramètres</h1>
+    <div class="flex gap-2.5 flex-wrap">
+      <button
+        (click)="onTest()"
+        [disabled]="testing()"
+        class="glass inline-flex items-center justify-center gap-2 px-5 py-2.75 rounded-[10px] cursor-pointer text-white font-sans text-[13px] font-medium transition-opacity"
+        [style.opacity]="testing() ? '0.6' : '1'"
+      >
+        <svg
+          width="13"
+          height="13"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path d="M12 22a10 10 0 1 1 7.07-2.93"/>
+          <path d="m9 11 3 3 7-7"/>
+        </svg>
+        @if (testing()) {
+          Test en cours…
+        } @else {
+          Tester les connexions
+        }
+      </button>
+      <button
+        (click)="onSave()"
+        [disabled]="saving()"
+        class="inline-flex items-center justify-center gap-2 px-5 py-2.75 rounded-[10px] cursor-pointer bg-accent border-0 text-accent-dark font-sans text-[13px] font-semibold shadow-accent-btn transition-opacity"
+        [style.opacity]="saving() ? '0.6' : '1'"
+      >
+        @if (saving()) {
+          Sauvegarde…
+        } @else {
+          Sauvegarder
+        }
+      </button>
+    </div>
+  </div>
+
+  <!-- 2-col grid -->
+  <div class="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-5">
+    <!-- ── Plex ─────────────────────────────────────────────────── -->
+    <div class="px-6 py-5.5 rounded-[14px] bg-white/3 border border-white/8">
+      <div class="flex items-center justify-between mb-1">
+        <div class="text-[15px] font-semibold text-white">Plex</div>
+      </div>
+      <div class="text-[12px] text-white/55 mb-4.5">
+        Source de l'inventaire et des stats de visionnage
+      </div>
+      <label class="block mb-3">
+        <div class="text-[10px] font-mono tracking-[1px] uppercase text-white/45 mb-1.5">
+          URL du serveur
+        </div>
+        <input
+          [value]="plexUrl()"
+          (input)="plexUrl.set($any($event.target).value)"
+          placeholder="http://192.168.1.x:32400"
+          class="w-full px-3 py-2.25 rounded-lg bg-white/6 border border-white/10 text-white font-sans text-[13px] outline-none"
+        />
+      </label>
+    </div>
+
+    <!-- ── Radarr ─────────────────────────────────────────────────── -->
+    <ng-container
+      [ngTemplateOutlet]="serviceCard"
+      [ngTemplateOutletContext]="{
+        name: 'Radarr',
+        subtitle: 'Gestion des films',
+        url: radarrUrl(),
+        onUrl: radarrUrl.set.bind(radarrUrl),
+        keyConfigured: radarrConfigured(),
+        editing: editRadarrKey(),
+        onEdit: editRadarrKey.set.bind(editRadarrKey),
+        key: radarrKey(),
+        onKey: radarrKey.set.bind(radarrKey),
+        testResult: testResults()?.radarr ?? null,
+      }"
+    />
+
+    <!-- ── Sonarr ─────────────────────────────────────────────────── -->
+    <ng-container
+      [ngTemplateOutlet]="serviceCard"
+      [ngTemplateOutletContext]="{
+        name: 'Sonarr',
+        subtitle: 'Gestion des séries',
+        url: sonarrUrl(),
+        onUrl: sonarrUrl.set.bind(sonarrUrl),
+        keyConfigured: sonarrConfigured(),
+        editing: editSonarrKey(),
+        onEdit: editSonarrKey.set.bind(editSonarrKey),
+        key: sonarrKey(),
+        onKey: sonarrKey.set.bind(sonarrKey),
+        testResult: testResults()?.sonarr ?? null,
+      }"
+    />
+
+    <!-- ── Seerr ─────────────────────────────────────────────────── -->
+    <ng-container
+      [ngTemplateOutlet]="serviceCard"
+      [ngTemplateOutletContext]="{
+        name: 'Seerr',
+        subtitle: 'Demandes utilisateurs (optionnel)',
+        url: seerrUrl(),
+        onUrl: seerrUrl.set.bind(seerrUrl),
+        keyConfigured: seerrConfigured(),
+        editing: editSeerrKey(),
+        onEdit: editSeerrKey.set.bind(editSeerrKey),
+        key: seerrKey(),
+        onKey: seerrKey.set.bind(seerrKey),
+        testResult: testResults()?.seerr ?? null,
+      }"
+    />
+
+    <!-- ── Users section (span 2) ───────────────────────────────── -->
+    <div class="md:col-span-2 px-6 py-5.5 rounded-[14px] bg-white/3 border border-white/8">
+      <div class="flex items-center gap-3 mb-5">
+        <div class="text-[15px] font-semibold text-white">Utilisateurs Plex</div>
+        <span
+          class="px-2.5 py-1 rounded-md text-[11px] font-semibold font-mono bg-state-ok/15 text-state-ok border border-state-ok/25"
+        >
+          {{ countedUsers().length }}/{{ allUsers().length }} comptés
+        </span>
+      </div>
+
+      @if (allUsers().length === 0) {
+        <div class="text-[13px] text-white/35 font-mono py-4">Aucun utilisateur synchronisé</div>
+      }
+
+      <div class="flex flex-col gap-0.5">
+        @for (user of allUsers(); track user.id) {
+          <div class="flex items-center gap-3.5 px-3 py-2.75 rounded-[10px] bg-white/2">
+            <!-- Avatar -->
+            <user-avatar [name]="user.name" [size]="36" />
+
+            <!-- Name + badges -->
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2">
+                <span class="text-[14px] font-medium text-white">{{ user.name }}</span>
+                @if (user.admin) {
+                  <span
+                    class="text-[9px] font-mono tracking-[0.8px] uppercase px-1.75 py-0.5 rounded-sm font-semibold bg-accent/15 text-accent border border-accent/25"
+                  >
+                    Propriétaire
+                  </span>
+                }
+              </div>
+            </div>
+
+            <!-- iOS-style switch (42×24, thumb 18, accent saumon ON) -->
+            <button
+              role="switch"
+              [attr.aria-checked]="userCounted(user)"
+              [attr.aria-label]="(userCounted(user) ? 'Désactiver' : 'Activer') + ' le comptage pour ' + user.name"
+              (click)="onToggleUser(user)"
+              class="relative w-10.5 h-6 rounded-full border-0 cursor-pointer shrink-0 p-0 transition-colors duration-200"
+              [style.background]="userCounted(user) ? 'var(--color-accent)' : 'rgba(255,255,255,0.08)'"
+              [style.border]="userCounted(user) ? '1px solid transparent' : '1px solid rgba(255,255,255,0.12)'"
+              [style.box-shadow]="userCounted(user) ? '0 0 12px color-mix(in srgb, var(--color-accent) 35%, transparent), inset 0 1px 0 rgba(255,255,255,0.25)' : 'none'"
+            >
+              <div
+                class="absolute top-0.5 w-4.5 h-4.5 rounded-full bg-white transition-[left] duration-200 shadow-thumb"
+                [style.left]="userCounted(user) ? '20px' : '2px'"
+              ></div>
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- ── Retention section (span 2) ─────────────────────────── -->
+    <div class="md:col-span-2 px-6 py-5.5 rounded-[14px] bg-white/3 border border-white/8">
+      <div class="flex items-baseline justify-between gap-3 mb-1.5">
+        <div class="text-[15px] font-semibold text-white">Rétention de la corbeille</div>
+        <div class="text-[22px] font-semibold font-mono text-accent tracking-[-0.02em]">
+          {{ retentionDays() }} jour{{ retentionDays() > 1 ? 's' : '' }}
+        </div>
+      </div>
+      <div class="text-[12px] text-white/55 mb-6">
+        Durée avant suppression définitive des items mis en corbeille
+      </div>
+
+      <!-- Custom slider : track 8px + fill accent + thumb white 18px -->
+      <div class="relative h-4.5 flex items-center">
+        <!-- Track -->
+        <div class="absolute left-0 right-0 h-2 rounded-full bg-white/8"></div>
+        <!-- Fill -->
+        <div
+          class="absolute left-0 h-2 rounded-full bg-accent pointer-events-none shadow-accent-glow"
+          [style.width]="retentionPct() + '%'"
+        ></div>
+        <!-- Thumb -->
+        <div
+          class="absolute top-1/2 size-4.5 -mt-2.25 rounded-full bg-white pointer-events-none shadow-thumb"
+          [style.left]="'calc(' + retentionPct() + '% - 9px)'"
+        ></div>
+        <!-- Native input (invisible, full-width, for interaction & a11y) -->
+        <input
+          type="range"
+          min="1"
+          max="365"
+          [value]="retentionDays()"
+          (input)="retentionDays.set(+$any($event.target).value)"
+          class="absolute inset-0 w-full opacity-0 cursor-pointer"
+          aria-label="Durée de rétention en jours"
+        />
+      </div>
+
+      <!-- Tick labels -->
+      <div class="flex justify-between mt-3 text-[10px] font-mono text-white/35 tracking-[0.3px]">
+        <span>1j</span>
+        <span>30j</span>
+        <span>90j</span>
+        <span>180j</span>
+        <span>365j</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Service card template ────────────────────────────────────────── -->
+<ng-template
+  #serviceCard
+  let-name="name"
+  let-subtitle="subtitle"
+  let-url="url"
+  let-onUrl="onUrl"
+  let-keyConfigured="keyConfigured"
+  let-editing="editing"
+  let-onEdit="onEdit"
+  let-key="key"
+  let-onKey="onKey"
+  let-testResult="testResult"
+>
+  <div class="px-6 py-5.5 rounded-[14px] bg-white/3 border border-white/8">
+    <div class="flex items-center justify-between gap-3 mb-1">
+      <div class="text-[15px] font-semibold text-white">{{ name }}</div>
+      @if (testResult) {
+        <span
+          class="status-chip inline-flex items-center gap-1.75 text-[11px] font-mono font-semibold tracking-[0.8px] uppercase px-2.75 py-1.25 rounded-md {{ statusClass(testResult.status) }}"
+        >
+          <span class="status-dot w-1.5 h-1.5 rounded-full"></span>
+          {{ statusLabel(testResult.status) }}
+        </span>
+      }
+    </div>
+    @if (subtitle) {
+      <div class="text-[12px] text-white/55 mb-4.5">{{ subtitle }}</div>
+    }
+
+    <label class="block mb-3">
+      <div class="text-[10px] font-mono tracking-[1px] uppercase text-white/45 mb-1.5">URL</div>
+      <input
+        [value]="url"
+        (input)="onUrl($any($event.target).value)"
+        placeholder="http://localhost:7878"
+        class="w-full px-3 py-2.25 rounded-lg bg-white/6 border border-white/10 text-white font-sans text-[13px] outline-none"
+      />
+    </label>
+
+    <div>
+      <div class="text-[10px] font-mono tracking-[1px] uppercase text-white/45 mb-1.5">Clé API</div>
+      @if (!editing) {
+        <div class="flex items-center gap-2.5">
+          <div
+            class="flex-1 px-3 py-2.25 rounded-lg bg-white/4 border border-white/8 text-[13px] font-mono text-white/40 tracking-[2px]"
+          >
+            ••••••••••••••••
+          </div>
+          <button
+            (click)="onEdit(true)"
+            class="px-3.5 py-2.25 rounded-lg cursor-pointer bg-white/6 border border-white/10 text-white/70 font-sans text-[12px] font-medium whitespace-nowrap"
+          >
+            Modifier
+          </button>
+        </div>
+      } @else {
+        <input
+          [value]="key"
+          (input)="onKey($any($event.target).value)"
+          placeholder="Entrez la clé API…"
+          class="w-full px-3 py-2.25 rounded-lg bg-white/6 border border-white/10 text-white font-mono text-[13px] outline-none"
+        />
+      }
+    </div>
+  </div>
+</ng-template>

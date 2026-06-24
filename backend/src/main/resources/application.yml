@@ -1,0 +1,64 @@
+spring:
+  application:
+    name: removerr
+
+  datasource:
+    url: jdbc:sqlite:/config/removerr.db
+    # Driver config and SQLite PRAGMAs (WAL, FK, synchronous) set in DataSourceConfig
+
+  jpa:
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
+    hibernate:
+      # Liquibase owns the schema — Hibernate must not validate or alter it
+      ddl-auto: none
+    show-sql: false
+    open-in-view: false
+
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.xml
+    enabled: true
+
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=1000,expireAfterWrite=5m
+
+  mvc:
+    # SPA fallback: serve index.html for unknown routes handled by Angular router
+    throw-exception-if-no-handler-found: false
+
+  web:
+    resources:
+      add-mappings: true
+
+  jackson:
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+  
+  output:
+    ansi:
+      enabled: ALWAYS
+
+server:
+  port: 8080
+  servlet:
+    context-path: /
+  error:
+    include-message: always
+    include-binding-errors: always
+
+removerr:
+  jwt:
+    secret: ${JWT_SECRET}
+    expiration-days: 7
+  encryption:
+    key: ${REMOVERR_ENC_KEY}
+  purge:
+    # Hour (0-23) at which the daily auto-purge runs, in the JVM timezone (set TZ env var).
+    hour: ${PURGE_HOUR:3}
+
+logging:
+  level:
+    com.removerr: ${LOG_LEVEL:INFO}
+    org.springframework.security: WARN

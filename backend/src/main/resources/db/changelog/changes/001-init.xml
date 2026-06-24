@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="001-init" author="removerr">
+
+        <!-- All Removerr users are Plex users. Auth columns (token, admin, dates)
+             are populated for the admin on first login; NULL for regular users. -->
+        <createTable tableName="plex_user">
+            <column name="id" type="INTEGER" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <!-- Global Plex.tv account ID — set at login, used for auth lookup -->
+            <column name="plex_tv_id" type="INTEGER">
+                <constraints unique="true"/>
+            </column>
+            <!-- Local Plex server account ID — set at sync, used for viewer history matching -->
+            <column name="plex_account_id" type="INTEGER">
+                <constraints unique="true"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="email" type="VARCHAR(255)"/>
+
+
+            <column name="is_admin" type="INTEGER" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="counted" type="INTEGER" defaultValueNumeric="1">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Auth columns — NULL for non-admin users -->
+            <column name="plex_token_encrypted" type="TEXT"/>
+            <column name="created_at" type="VARCHAR(30)"/>
+            <column name="last_login_at" type="VARCHAR(30)"/>
+            <!-- Plex.tv avatar URL — used as a secondary signal to link an
+                 admin (logged in via plex.tv) with their local Plex server account. -->
+            <column name="plex_thumb" type="VARCHAR(512)"/>
+        </createTable>
+
+        <createTable tableName="trash_item">
+            <column name="id" type="INTEGER" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <!-- MOVIE | SHOW | SEASON -->
+            <column name="media_type" type="VARCHAR(10)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- RADARR | SONARR -->
+            <column name="external_service" type="VARCHAR(10)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="external_id" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tmdb_id" type="INTEGER"/>
+            <column name="tvdb_id" type="INTEGER"/>
+            <!-- Populated when media_type = SEASON -->
+            <column name="season_number" type="INTEGER"/>
+            <!-- Snapshot at trash time for display -->
+            <column name="title" type="VARCHAR(512)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="year" type="INTEGER"/>
+            <column name="poster_url" type="VARCHAR(1024)"/>
+            <column name="size_bytes" type="INTEGER" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="trashed_at" type="VARCHAR(30)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="purge_at" type="VARCHAR(30)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="trashed_by_user_id" type="INTEGER">
+                <constraints nullable="false" foreignKeyName="fk_trash_user"
+                             references="plex_user(id)"/>
+            </column>
+            <column name="seerr_requested_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <createIndex indexName="idx_trash_purge_at" tableName="trash_item">
+            <column name="purge_at"/>
+        </createIndex>
+        <createIndex indexName="idx_trash_external" tableName="trash_item">
+            <column name="external_service"/>
+            <column name="external_id"/>
+        </createIndex>
+
+        <createTable tableName="audit_log">
+            <column name="id" type="INTEGER" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <!-- NULL for system actions (scheduled purge) -->
+            <column name="user_id" type="INTEGER">
+                <constraints foreignKeyName="fk_audit_user" references="plex_user(id)"/>
+            </column>
+            <!-- LOGIN | LOGOUT | TRASH | RESTORE | PURGE_AUTO | PURGE_MANUAL | SETTINGS_UPDATE -->
+            <column name="action" type="VARCHAR(30)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- MOVIE | SHOW | SEASON | SETTING -->
+            <column name="target_type" type="VARCHAR(20)"/>
+            <column name="target_id" type="VARCHAR(255)"/>
+            <!-- JSON blob for additional context -->
+            <column name="metadata_json" type="TEXT"/>
+            <column name="created_at" type="VARCHAR(30)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex indexName="idx_audit_created_at" tableName="audit_log">
+            <column name="created_at"/>
+        </createIndex>
+        <createIndex indexName="idx_audit_user_id" tableName="audit_log">
+            <column name="user_id"/>
+        </createIndex>
+
+        <!-- Key/value store for service configuration (URLs, encrypted API keys, retention) -->
+        <createTable tableName="app_setting">
+            <column name="key" type="VARCHAR(100)">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="value" type="TEXT"/>
+            <column name="updated_at" type="VARCHAR(30)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+    </changeSet>
+
+</databaseChangeLog>

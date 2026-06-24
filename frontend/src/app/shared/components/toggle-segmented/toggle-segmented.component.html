@@ -1,0 +1,15 @@
+<div class="glass toggle-wrapper" role="tablist">
+  @for (opt of options(); track opt) {
+    <button
+      type="button"
+      role="tab"
+      [attr.aria-selected]="opt === value()"
+      [attr.tabindex]="opt === value() ? 0 : -1"
+      class="segment"
+      [class.segment-active]="opt === value()"
+      (click)="select(opt)"
+    >
+      {{ opt }}
+    </button>
+  }
+</div>
