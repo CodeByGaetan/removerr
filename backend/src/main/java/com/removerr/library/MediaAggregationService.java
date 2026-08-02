@@ -16,6 +16,7 @@ import com.removerr.library.dto.MediaCard;
 import com.removerr.library.dto.SeerrInfo;
 import com.removerr.library.dto.SeasonCard;
 import com.removerr.library.dto.ShowCard;
+import com.removerr.plexuser.PlexUser;
 import com.removerr.plexuser.PlexUserRepository;
 import com.removerr.trash.TrashItemRepository;
 import org.slf4j.Logger;
@@ -56,9 +57,7 @@ public class MediaAggregationService {
     @Cacheable("library")
     public List<MediaCard> getMovies() {
         Set<Integer> trashedMovieIds = trashRepo.findTrashedExternalIds("MOVIE");
-        Set<Integer> countedUserIds = plexUserRepository.findByCountedTrue()
-                .stream().filter(u -> u.getPlexAccountId() != null)
-                .map(u -> u.getPlexAccountId()).collect(Collectors.toSet());
+        Map<Integer, Long> countedAccountToUserId = loadCountedAccountToUserId();
 
         CompletableFuture<List<RadarrMovie>> moviesFuture =
                 CompletableFuture.supplyAsync(radarrClient::getMovies);
@@ -80,9 +79,9 @@ public class MediaAggregationService {
                 .filter(m -> !trashedMovieIds.contains(m.id()))
                 .map(m -> {
                     PlexMetadata plex = plexMap != null ? plexMap.get(m.tmdbId()) : null;
-                    Integer plexUniqueViewers = computeUniqueViewers(
+                    List<Long> plexViewerUserIds = resolveViewerUserIds(
                             plex != null ? plex.ratingKey() : null,
-                            movieViewersByRatingKey, countedUserIds);
+                            movieViewersByRatingKey, countedAccountToUserId);
                     return new MediaCard(
                             "movie",
                             m.id(),
@@ -95,8 +94,7 @@ public class MediaAggregationService {
                             m.monitored(),
                             m.added(),
                             seerrMap.get(m.tmdbId()),
-                            plex != null ? plex.viewCount() : (plexMap == null ? null : 0),
-                            plexUniqueViewers
+                            plexViewerUserIds
                     );
                 })
                 .toList();
@@ -110,9 +108,7 @@ public class MediaAggregationService {
         Set<String> trashedSeasonKeys = trashRepo.findTrashedSeasons().stream()
                 .map(t -> t.getExternalId() + ":" + t.getSeasonNumber())
                 .collect(Collectors.toSet());
-        Set<Integer> countedUserIds = plexUserRepository.findByCountedTrue()
-                .stream().filter(u -> u.getPlexAccountId() != null)
-                .map(u -> u.getPlexAccountId()).collect(Collectors.toSet());
+        Map<Integer, Long> countedAccountToUserId = loadCountedAccountToUserId();
 
         CompletableFuture<List<SonarrSeries>> seriesFuture =
                 CompletableFuture.supplyAsync(sonarrClient::getSeries);
@@ -146,9 +142,9 @@ public class MediaAggregationService {
                             .map(season -> {
                                 int totalEpisodes = season.statistics() != null
                                         ? season.statistics().totalEpisodeCount() : 0;
-                                Integer seasonViewers = computeSeasonUniqueViewers(
+                                List<Long> seasonViewers = resolveSeasonViewerUserIds(
                                         showRatingKey, episodeViewersByShow,
-                                        season.seasonNumber(), totalEpisodes, countedUserIds);
+                                        season.seasonNumber(), totalEpisodes, countedAccountToUserId);
                                 return new SeasonCard(
                                         season.seasonNumber(),
                                         season.statistics() != null ? season.statistics().episodeFileCount() : 0,
@@ -165,12 +161,12 @@ public class MediaAggregationService {
                     SonarrSeason lastSeason = visibleSeasons.stream()
                             .max(Comparator.comparingInt(SonarrSeason::seasonNumber))
                             .orElse(null);
-                    Integer showUniqueViewers = computeSeasonUniqueViewers(
+                    List<Long> showViewerUserIds = resolveSeasonViewerUserIds(
                             showRatingKey, episodeViewersByShow,
                             lastSeason != null ? lastSeason.seasonNumber() : 0,
                             lastSeason != null && lastSeason.statistics() != null
                                     ? lastSeason.statistics().totalEpisodeCount() : 0,
-                            countedUserIds);
+                            countedAccountToUserId);
 
                     return new ShowCard(
                             "show",
@@ -186,7 +182,7 @@ public class MediaAggregationService {
                             seerrMap.get(s.tvdbId()),
                             plexShow != null ? plexShow.viewedLeafCount() : null,
                             plexShow != null ? plexShow.leafCount() : null,
-                            showUniqueViewers
+                            showViewerUserIds
                     );
                 })
                 .toList();
@@ -206,12 +202,22 @@ public class MediaAggregationService {
 
     // ── Private helpers — viewer computation ─────────────────────────────────
 
-    private Integer computeUniqueViewers(String ratingKey, Map<String, Set<Integer>> viewerMap,
-                                         Set<Integer> countedIds) {
+    private Map<Integer, Long> loadCountedAccountToUserId() {
+        return plexUserRepository.findByCountedTrueAndPlexAccountIdIsNotNull().stream()
+                .collect(Collectors.toMap(PlexUser::getPlexAccountId, PlexUser::getId));
+    }
+
+    // null when the viewer map is null (Plex not configured) — distinguishes
+    // "no data" from "configured but no viewer" (empty list).
+    private List<Long> resolveViewerUserIds(String ratingKey,
+                                            Map<String, Set<Integer>> viewerMap,
+                                            Map<Integer, Long> countedAccountToUserId) {
         if (viewerMap == null) return null;
-        if (ratingKey == null) return 0;
-        return (int) viewerMap.getOrDefault(ratingKey, Set.of())
-                .stream().filter(countedIds::contains).count();
+        if (ratingKey == null) return List.of();
+        return viewerMap.getOrDefault(ratingKey, Set.of()).stream()
+                .map(countedAccountToUserId::get)
+                .filter(Objects::nonNull)
+                .toList();
     }
 
     private Map<String, Set<Integer>> buildMovieViewerMap(List<PlexHistoryEntry> history) {
@@ -247,17 +253,20 @@ public class MediaAggregationService {
 
     // A user is considered to have watched the season only if they scrobbled the LAST episode
     // (= episode number == totalEpisodes from Sonarr, even if not downloaded locally).
-    private Integer computeSeasonUniqueViewers(String showRatingKey,
-                                               Map<String, Map<Integer, Map<Integer, Set<Integer>>>> episodeViewersByShow,
-                                               int seasonNumber, int totalEpisodes, Set<Integer> countedIds) {
+    private List<Long> resolveSeasonViewerUserIds(String showRatingKey,
+                                                  Map<String, Map<Integer, Map<Integer, Set<Integer>>>> episodeViewersByShow,
+                                                  int seasonNumber, int totalEpisodes,
+                                                  Map<Integer, Long> countedAccountToUserId) {
         if (episodeViewersByShow == null) return null;
-        if (showRatingKey == null || totalEpisodes <= 0) return 0;
+        if (showRatingKey == null || totalEpisodes <= 0) return List.of();
         Map<Integer, Map<Integer, Set<Integer>>> seasonMap = episodeViewersByShow.get(showRatingKey);
-        if (seasonMap == null) return 0;
+        if (seasonMap == null) return List.of();
         Map<Integer, Set<Integer>> episodeMap = seasonMap.get(seasonNumber);
-        if (episodeMap == null) return 0;
-        return (int) episodeMap.getOrDefault(totalEpisodes, Set.of())
-                .stream().filter(countedIds::contains).count();
+        if (episodeMap == null) return List.of();
+        return episodeMap.getOrDefault(totalEpisodes, Set.of()).stream()
+                .map(countedAccountToUserId::get)
+                .filter(Objects::nonNull)
+                .toList();
     }
 
     // ── Private helpers — fetch ───────────────────────────────────────────────

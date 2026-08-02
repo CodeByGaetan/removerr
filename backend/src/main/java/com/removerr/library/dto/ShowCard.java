@@ -16,5 +16,5 @@ public record ShowCard(
         SeerrInfo seerr,
         Integer plexWatchedEpisodes,    // null if Plex not configured
         Integer plexTotalEpisodes,      // null if Plex not configured
-        Integer plexUniqueViewers       // null if Plex not configured; count of counted users who watched
+        List<Long> plexViewerUserIds    // null if Plex not configured; otherwise local PlexUser IDs of counted users who watched the last episode of the last visible season
 ) {}

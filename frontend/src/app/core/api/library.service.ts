@@ -15,7 +15,7 @@ export interface SeasonCard {
   totalEpisodes: number;
   sizeOnDisk: number;
   monitored: boolean;
-  plexUniqueViewers: number | null;
+  plexViewerUserIds: number[] | null;
 }
 
 export interface MediaCard {
@@ -30,8 +30,7 @@ export interface MediaCard {
   monitored: boolean;
   addedAt: string;
   seerr: SeerrInfo | null;
-  plexViewCount: number | null;
-  plexUniqueViewers: number | null;
+  plexViewerUserIds: number[] | null;
 }
 
 export interface ShowCard {
@@ -48,7 +47,7 @@ export interface ShowCard {
   seerr: SeerrInfo | null;
   plexWatchedEpisodes: number | null;
   plexTotalEpisodes: number | null;
-  plexUniqueViewers: number | null;
+  plexViewerUserIds: number[] | null;
 }
 
 @Injectable({ providedIn: 'root' })

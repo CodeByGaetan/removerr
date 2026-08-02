@@ -49,8 +49,8 @@ export class LibraryCardComponent {
   year = computed(() => this.movie()?.year ?? this.show()?.year ?? 0);
   sizeOnDisk = computed(() => this.movie()?.sizeOnDisk ?? this.show()?.sizeOnDisk ?? 0);
 
-  plexUniqueViewers = computed(
-    () => this.movie()?.plexUniqueViewers ?? this.show()?.plexUniqueViewers ?? null,
+  plexViewerUserIds = computed(
+    () => this.movie()?.plexViewerUserIds ?? this.show()?.plexViewerUserIds ?? null,
   );
   totalCounted = computed(() => this.auth.me()?.countedUsersTotal ?? 0);
 
@@ -74,9 +74,9 @@ export class LibraryCardComponent {
 
   ariaLabel = computed(() => {
     const kind = this.show() ? 'série' : 'film';
-    const viewers = this.plexUniqueViewers();
+    const viewers = this.plexViewerUserIds();
     const total = this.totalCounted();
-    const watchedPart = viewers !== null && total > 0 ? `, vu par ${viewers} sur ${total}` : '';
+    const watchedPart = viewers !== null && total > 0 ? `, vu par ${viewers.length} sur ${total}` : '';
     return `${this.title()} (${this.year()}), ${kind}${watchedPart}. Entrée pour ouvrir, T pour supprimer.`;
   });
 

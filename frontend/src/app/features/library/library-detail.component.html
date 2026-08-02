@@ -103,12 +103,12 @@
     </div>
 
     <!-- "Vu par" section -->
-    @if (plexUniqueViewers() !== null && totalCounted() > 0) {
+    @if (plexViewerUserIds() !== null && totalCounted() > 0) {
       <div class="mb-9">
         <div
           class="text-[11px] font-mono tracking-[1.4px] uppercase text-white/65 border-t border-white/8 pt-4 mb-4"
         >
-          Vu par {{ plexUniqueViewers() }}/{{ totalCounted() }} utilisateurs
+          Vu par {{ plexViewerUserIds()!.length }}/{{ totalCounted() }} utilisateurs
         </div>
         <div class="flex flex-wrap gap-2">
           @for (entry of viewerUserPills(); track entry.user.id) {

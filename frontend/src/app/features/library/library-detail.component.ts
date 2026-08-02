@@ -80,19 +80,19 @@ export class LibraryDetailComponent implements OnDestroy {
     () => this.countedUsers().length || this.auth.me()?.countedUsersTotal || 0,
   );
 
-  plexUniqueViewers = computed(() => this.media()?.plexUniqueViewers ?? null);
+  plexViewerUserIds = computed(() => this.media()?.plexViewerUserIds ?? null);
 
   viewersTileValue = computed(() => {
-    const viewers = this.plexUniqueViewers();
+    const viewers = this.plexViewerUserIds();
     const total = this.totalCounted();
     if (viewers === null || total === 0) return '–';
-    return `${viewers}/${total}`;
+    return `${viewers.length}/${total}`;
   });
 
   viewersAccent = computed(() => {
-    const viewers = this.plexUniqueViewers();
+    const viewers = this.plexViewerUserIds();
     const total = this.totalCounted();
-    return viewers !== null && total > 0 && viewers === total ? this.accent : null;
+    return viewers !== null && total > 0 && viewers.length === total ? this.accent : null;
   });
 
   addedAtLabel = computed(() => {
@@ -102,8 +102,8 @@ export class LibraryDetailComponent implements OnDestroy {
   });
 
   viewerUserPills = computed(() => {
-    const viewers = this.plexUniqueViewers() ?? 0;
-    return this.countedUsers().map((u, i) => ({ user: u, watched: i < viewers }));
+    const viewerIds = new Set(this.plexViewerUserIds() ?? []);
+    return this.countedUsers().map((u) => ({ user: u, watched: viewerIds.has(u.id) }));
   });
 
   seasons = computed(() => this.show()?.seasons ?? []);

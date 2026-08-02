@@ -127,8 +127,8 @@ export class LibraryComponent {
     if (q) items = items.filter((m) => m.title.toLowerCase().includes(q));
     items = this.applyAvailabilityFilter(items);
     const watched = this.watchedFilter();
-    if (watched === 'watched') items = items.filter((m) => (m.plexViewCount ?? 0) > 0);
-    else if (watched === 'unwatched') items = items.filter((m) => (m.plexViewCount ?? 0) === 0);
+    if (watched === 'watched') items = items.filter((m) => (m.plexViewerUserIds?.length ?? 0) > 0);
+    else if (watched === 'unwatched') items = items.filter((m) => (m.plexViewerUserIds?.length ?? 0) === 0);
     return this.applySort(items);
   });
 

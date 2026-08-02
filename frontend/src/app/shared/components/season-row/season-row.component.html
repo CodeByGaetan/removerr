@@ -23,9 +23,9 @@
 
   <!-- Viewer dots (full row on mobile, dedicated 180px column on desktop) -->
   <div class="col-span-3 md:col-span-1 flex flex-col gap-1.5">
-    @if (season().plexUniqueViewers !== null && viewerPills().length > 0) {
+    @if (season().plexViewerUserIds !== null && viewerPills().length > 0) {
       <div class="text-[9px] font-mono tracking-[1.2px] uppercase text-white/45">
-        Vu par {{ season().plexUniqueViewers }}/{{ countedUsers().length }}
+        Vu par {{ season().plexViewerUserIds!.length }}/{{ countedUsers().length }}
       </div>
       <div class="flex gap-1 items-center flex-wrap">
         @for (entry of viewerPills(); track entry.user.id) {

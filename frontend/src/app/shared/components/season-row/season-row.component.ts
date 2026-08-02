@@ -29,8 +29,8 @@ export class SeasonRowComponent {
   barColor = computed(() => this.fullyDownloaded() ? this.accent() : 'rgba(255,255,255,0.55)');
 
   viewerPills = computed(() => {
-    const viewers = this.season().plexUniqueViewers ?? 0;
-    return this.countedUsers().map((u, i) => ({ user: u, watched: i < viewers }));
+    const viewerIds = new Set(this.season().plexViewerUserIds ?? []);
+    return this.countedUsers().map((u) => ({ user: u, watched: viewerIds.has(u.id) }));
   });
 
   onTrash(e: MouseEvent) {
