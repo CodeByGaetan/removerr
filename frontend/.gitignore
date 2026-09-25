@@ -42,3 +42,6 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
+
+# Local dev proxy pointing to a deployed backend
+/proxy.conf.remote.json
