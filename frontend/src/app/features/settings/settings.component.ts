@@ -1,6 +1,6 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, effect, inject, signal } from '@angular/core';
-import { Observable, forkJoin } from 'rxjs';
+import { Observable, forkJoin, timer } from 'rxjs';
 import { ConnectionTestResult, SettingsService } from '../../core/api/settings.service';
 import { PlexUser, UsersService } from '../../core/api/users.service';
 import { AuthService } from '../../core/auth/auth.service';
@@ -128,8 +128,10 @@ export class SettingsComponent {
 
   onTest() {
     this.testing.set(true);
-    this.settingsService.test().subscribe({
-      next: (results) => {
+    this.testResults.set(null);
+    // A fast identical response would otherwise look like the click did nothing.
+    forkJoin([this.settingsService.test(), timer(400)]).subscribe({
+      next: ([results]) => {
         this.testResults.set(results);
         this.testing.set(false);
       },
