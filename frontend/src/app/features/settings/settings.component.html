@@ -45,8 +45,12 @@
   <div class="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-5">
     <!-- ── Plex ─────────────────────────────────────────────────── -->
     <div class="px-6 py-5.5 rounded-[14px] bg-white/3 border border-white/8">
-      <div class="flex items-center justify-between mb-1">
+      <div class="flex items-center justify-between gap-3 mb-1">
         <div class="text-[15px] font-semibold text-white">Plex</div>
+        <ng-container
+          [ngTemplateOutlet]="statusChip"
+          [ngTemplateOutletContext]="{ $implicit: testResults()?.plex ?? null }"
+        />
       </div>
       <div class="text-[12px] text-white/55 mb-4.5">
         Source de l'inventaire et des stats de visionnage
@@ -245,14 +249,10 @@
   <div class="px-6 py-5.5 rounded-[14px] bg-white/3 border border-white/8">
     <div class="flex items-center justify-between gap-3 mb-1">
       <div class="text-[15px] font-semibold text-white">{{ name }}</div>
-      @if (testResult) {
-        <span
-          class="status-chip inline-flex items-center gap-1.75 text-[11px] font-mono font-semibold tracking-[0.8px] uppercase px-2.75 py-1.25 rounded-md {{ statusClass(testResult.status) }}"
-        >
-          <span class="status-dot w-1.5 h-1.5 rounded-full"></span>
-          {{ statusLabel(testResult.status) }}
-        </span>
-      }
+      <ng-container
+        [ngTemplateOutlet]="statusChip"
+        [ngTemplateOutletContext]="{ $implicit: testResult }"
+      />
     </div>
     @if (subtitle) {
       <div class="text-[12px] text-white/55 mb-4.5">{{ subtitle }}</div>
@@ -294,4 +294,16 @@
       }
     </div>
   </div>
+</ng-template>
+
+<!-- ── Connection test status chip ───────────────────────────────── -->
+<ng-template #statusChip let-testResult>
+  @if (testResult) {
+    <span
+      class="status-chip inline-flex items-center gap-1.75 text-[11px] font-mono font-semibold tracking-[0.8px] uppercase px-2.75 py-1.25 rounded-md {{ statusClass(testResult.status) }}"
+    >
+      <span class="status-dot w-1.5 h-1.5 rounded-full"></span>
+      {{ statusLabel(testResult.status) }}
+    </span>
+  }
 </ng-template>

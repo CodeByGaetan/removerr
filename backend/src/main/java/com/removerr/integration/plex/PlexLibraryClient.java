@@ -23,6 +23,7 @@ import reactor.netty.http.client.HttpClient;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 @Component
@@ -105,9 +106,12 @@ public class PlexLibraryClient {
         return url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
     }
 
-    private String adminToken() {
+    public Optional<String> findAdminToken() {
         return plexUserRepository.findByAdminTrue()
-                .map(u -> encryptor.decrypt(u.getPlexTokenEncrypted()))
-                .orElseThrow(() -> new IntegrationException("No admin user found"));
+                .map(u -> encryptor.decrypt(u.getPlexTokenEncrypted()));
+    }
+
+    private String adminToken() {
+        return findAdminToken().orElseThrow(() -> new IntegrationException("No admin user found"));
     }
 }

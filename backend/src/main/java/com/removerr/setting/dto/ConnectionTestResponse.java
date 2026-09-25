@@ -1,6 +1,7 @@
 package com.removerr.setting.dto;
 
 public record ConnectionTestResponse(
+        ServiceStatus plex,
         ServiceStatus radarr,
         ServiceStatus sonarr,
         ServiceStatus seerr
@@ -15,7 +16,7 @@ public record ConnectionTestResponse(
         }
 
         public static ServiceStatus authFailed() {
-            return new ServiceStatus(Status.AUTH_FAILED, "Invalid API key");
+            return new ServiceStatus(Status.AUTH_FAILED, "Invalid credentials");
         }
 
         public static ServiceStatus unreachable(String error) {

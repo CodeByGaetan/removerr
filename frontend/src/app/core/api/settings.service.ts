@@ -32,6 +32,7 @@ export interface ServiceTestResult {
 }
 
 export interface ConnectionTestResult {
+  plex: ServiceTestResult;
   radarr: ServiceTestResult;
   sonarr: ServiceTestResult;
   seerr: ServiceTestResult;
