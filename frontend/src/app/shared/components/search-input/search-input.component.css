@@ -1,6 +1,7 @@
 :host {
   display: block;
-  flex: 1;
+  /* Non-zero basis so a wrapping parent row pushes the pills to the next line instead of crushing the input. */
+  flex: 1 1 200px;
   min-width: 0;
   max-width: 340px;
 }
@@ -16,6 +17,8 @@
 
 .search-input {
   flex: 1;
+  min-width: 0;
+  text-overflow: ellipsis;
   background: transparent;
   border: none;
   outline: none;
