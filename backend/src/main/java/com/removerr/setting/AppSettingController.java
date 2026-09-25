@@ -4,6 +4,7 @@ import com.removerr.setting.dto.ConnectionTestResponse;
 import com.removerr.setting.dto.ConnectionTestResponse.ServiceStatus;
 import com.removerr.setting.dto.SettingsResponse;
 import com.removerr.setting.dto.UpdateSettingsRequest;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -28,7 +29,7 @@ public class AppSettingController {
     }
 
     @PutMapping
-    public ResponseEntity<Void> updateSettings(@RequestBody UpdateSettingsRequest request) {
+    public ResponseEntity<Void> updateSettings(@Valid @RequestBody UpdateSettingsRequest request) {
         settingService.updateSettings(request);
         return ResponseEntity.noContent().build();
     }

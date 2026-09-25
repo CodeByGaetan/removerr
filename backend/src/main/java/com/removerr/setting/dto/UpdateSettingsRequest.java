@@ -1,5 +1,8 @@
 package com.removerr.setting.dto;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+
 public record UpdateSettingsRequest(
         String plexServerUrl,
 
@@ -12,5 +15,5 @@ public record UpdateSettingsRequest(
         String seerrUrl,
         String seerrApiKey,
 
-        Integer trashRetentionDays
+        @Min(1) @Max(365) Integer trashRetentionDays
 ) {}
