@@ -4,18 +4,21 @@ import { Observable, forkJoin, timer } from 'rxjs';
 import { ConnectionTestResult, SaveSettingsRequest, SettingsService } from '../../core/api/settings.service';
 import { PlexUser, UsersService } from '../../core/api/users.service';
 import { AuthService } from '../../core/auth/auth.service';
+import { LeaveConfirmable } from '../../core/guards/unsaved-changes.guard';
 import { messages } from '../../core/messages';
 import { ToastService } from '../../core/services/toast.service';
+import { ConfirmModalComponent } from '../../shared/components/confirm-modal/confirm-modal.component';
 import { UserAvatarComponent } from '../../shared/components/user-avatar/user-avatar.component';
 
 @Component({
   selector: 'app-settings',
   standalone: true,
-  imports: [NgTemplateOutlet, UserAvatarComponent],
+  imports: [NgTemplateOutlet, ConfirmModalComponent, UserAvatarComponent],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.css',
+  host: { '(window:beforeunload)': 'onBeforeUnload($event)' },
 })
-export class SettingsComponent {
+export class SettingsComponent implements LeaveConfirmable {
   private settingsService = inject(SettingsService);
   private usersService = inject(UsersService);
   private auth = inject(AuthService);
@@ -49,6 +52,25 @@ export class SettingsComponent {
   saving = signal(false);
   testing = signal(false);
   testResults = signal<ConnectionTestResult | null>(null);
+
+  private leaveResolver = signal<((leave: boolean) => void) | null>(null);
+  readonly confirmingLeave = computed(() => this.leaveResolver() !== null);
+
+  readonly hasUnsavedChanges = computed(() => {
+    const s = this.settingsService.settings();
+    if (!s) return false;
+    return (
+      this.plexUrl() !== (s.plexServerUrl ?? '') ||
+      this.radarrUrl() !== (s.radarrUrl ?? '') ||
+      this.sonarrUrl() !== (s.sonarrUrl ?? '') ||
+      this.seerrUrl() !== (s.seerrUrl ?? '') ||
+      this.retentionDays() !== (s.trashRetentionDays ?? 30) ||
+      (this.editRadarrKey() && this.radarrKey() !== '') ||
+      (this.editSonarrKey() && this.sonarrKey() !== '') ||
+      (this.editSeerrKey() && this.seerrKey() !== '') ||
+      this.pendingCounted().size > 0
+    );
+  });
 
   constructor() {
     this.settingsService.load();
@@ -149,6 +171,23 @@ export class SettingsComponent {
   userCounted(user: PlexUser): boolean {
     const m = this.pendingCounted();
     return m.has(user.id) ? m.get(user.id)! : user.counted;
+  }
+
+  confirmLeave(): boolean | Promise<boolean> {
+    if (!this.hasUnsavedChanges()) return true;
+    return new Promise((resolve) => this.leaveResolver.set(resolve));
+  }
+
+  resolveLeave(leave: boolean) {
+    this.leaveResolver()?.(leave);
+    this.leaveResolver.set(null);
+  }
+
+  onBeforeUnload(event: BeforeUnloadEvent) {
+    if (!this.hasUnsavedChanges()) return;
+    event.preventDefault();
+    // Older Safari only shows the native prompt when returnValue is set.
+    event.returnValue = '';
   }
 
   onToggleUser(user: PlexUser) {

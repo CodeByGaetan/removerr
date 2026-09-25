@@ -218,6 +218,16 @@
   </div>
 </div>
 
+@if (confirmingLeave()) {
+  <confirm-modal
+    title="Modifications non enregistrées"
+    message="Vos modifications seront perdues si vous quittez cette page."
+    confirmLabel="Quitter"
+    (confirmed)="resolveLeave(true)"
+    (cancelled)="resolveLeave(false)"
+  />
+}
+
 <!-- ── Service card template ────────────────────────────────────────── -->
 <ng-template
   #serviceCard
