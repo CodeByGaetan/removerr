@@ -136,7 +136,7 @@
     <div class="px-5 md:px-12 md:pb-12">
       <!-- Loading -->
       @if (activeLoading()) {
-        <div class="grid grid-cols-2 gap-3 md:grid-cols-6 md:gap-5">
+        <div class="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-5 lg:grid-cols-4 xl:grid-cols-6">
           @for (s of skeletons; track $index) {
             <div
               class="rounded-xl bg-card aspect-2/3 animate-[pulse_1.5s_ease-in-out_infinite]"
@@ -173,7 +173,7 @@
             }
           </div>
         } @else {
-          <div class="grid grid-cols-2 gap-3 md:grid-cols-6 md:gap-5">
+          <div class="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-5 lg:grid-cols-4 xl:grid-cols-6">
             @for (movie of filteredMovies(); track movie.radarrId) {
               <library-card [movie]="movie" (open)="openDetail($event)" />
             }
@@ -196,7 +196,7 @@
             }
           </div>
         } @else {
-          <div class="grid grid-cols-2 gap-3 md:grid-cols-6 md:gap-5">
+          <div class="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-5 lg:grid-cols-4 xl:grid-cols-6">
             @for (show of filteredShows(); track show.sonarrId) {
               <library-card [show]="show" (open)="openDetail($event)" />
             }
