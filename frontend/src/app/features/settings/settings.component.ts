@@ -1,7 +1,7 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { Observable, forkJoin, timer } from 'rxjs';
-import { ConnectionTestResult, SettingsService } from '../../core/api/settings.service';
+import { ConnectionTestResult, SaveSettingsRequest, SettingsService } from '../../core/api/settings.service';
 import { PlexUser, UsersService } from '../../core/api/users.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { messages } from '../../core/messages';
@@ -92,20 +92,24 @@ export class SettingsComponent {
     }
   }
 
+  private formValues(): SaveSettingsRequest {
+    return {
+      plexServerUrl: this.plexUrl() || null,
+      radarrUrl: this.radarrUrl() || null,
+      radarrApiKey: this.editRadarrKey() ? this.radarrKey() || null : null,
+      sonarrUrl: this.sonarrUrl() || null,
+      sonarrApiKey: this.editSonarrKey() ? this.sonarrKey() || null : null,
+      seerrUrl: this.seerrUrl() || null,
+      seerrApiKey: this.editSeerrKey() ? this.seerrKey() || null : null,
+      trashRetentionDays: this.retentionDays(),
+    };
+  }
+
   onSave() {
     this.saving.set(true);
 
     const requests: Observable<unknown>[] = [
-      this.settingsService.save({
-        plexServerUrl: this.plexUrl() || null,
-        radarrUrl: this.radarrUrl() || null,
-        radarrApiKey: this.editRadarrKey() ? this.radarrKey() || null : null,
-        sonarrUrl: this.sonarrUrl() || null,
-        sonarrApiKey: this.editSonarrKey() ? this.sonarrKey() || null : null,
-        seerrUrl: this.seerrUrl() || null,
-        seerrApiKey: this.editSeerrKey() ? this.seerrKey() || null : null,
-        trashRetentionDays: this.retentionDays(),
-      }),
+      this.settingsService.save(this.formValues()),
       ...Array.from(this.pendingCounted().entries()).map(([id, counted]) =>
         this.usersService.setCounted(id, counted),
       ),
@@ -130,7 +134,7 @@ export class SettingsComponent {
     this.testing.set(true);
     this.testResults.set(null);
     // A fast identical response would otherwise look like the click did nothing.
-    forkJoin([this.settingsService.test(), timer(400)]).subscribe({
+    forkJoin([this.settingsService.test(this.formValues()), timer(400)]).subscribe({
       next: ([results]) => {
         this.testResults.set(results);
         this.testing.set(false);

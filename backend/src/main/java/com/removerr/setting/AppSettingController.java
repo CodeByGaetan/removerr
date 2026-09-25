@@ -33,18 +33,26 @@ public class AppSettingController {
         return ResponseEntity.noContent().build();
     }
 
+    /**
+     * Tests the values currently in the form so they can be validated before saving.
+     * Same semantics as {@link #updateSettings}: a null field falls back to the saved value.
+     */
     @PostMapping("/test")
-    public ConnectionTestResponse testConnections() {
+    public ConnectionTestResponse testConnections(@RequestBody UpdateSettingsRequest form) {
         return new ConnectionTestResponse(
-                testArrService(settingService.get(AppSettingKey.RADARR_URL),
-                        settingService.get(AppSettingKey.RADARR_API_KEY),
+                testArrService(formOrSaved(form.radarrUrl(), AppSettingKey.RADARR_URL),
+                        formOrSaved(form.radarrApiKey(), AppSettingKey.RADARR_API_KEY),
                         "/api/v3/system/status"),
-                testArrService(settingService.get(AppSettingKey.SONARR_URL),
-                        settingService.get(AppSettingKey.SONARR_API_KEY),
+                testArrService(formOrSaved(form.sonarrUrl(), AppSettingKey.SONARR_URL),
+                        formOrSaved(form.sonarrApiKey(), AppSettingKey.SONARR_API_KEY),
                         "/api/v3/system/status"),
-                testSeerr(settingService.get(AppSettingKey.SEERR_URL),
-                        settingService.get(AppSettingKey.SEERR_API_KEY))
+                testSeerr(formOrSaved(form.seerrUrl(), AppSettingKey.SEERR_URL),
+                        formOrSaved(form.seerrApiKey(), AppSettingKey.SEERR_API_KEY))
         );
+    }
+
+    private String formOrSaved(String formValue, String key) {
+        return formValue != null ? formValue : settingService.get(key);
     }
 
     private ServiceStatus testArrService(String url, String apiKey, String statusPath) {

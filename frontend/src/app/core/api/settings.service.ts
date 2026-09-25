@@ -56,7 +56,7 @@ export class SettingsService {
     return this.http.put<void>('/api/settings', payload);
   }
 
-  test(): Observable<ConnectionTestResult> {
-    return this.http.post<ConnectionTestResult>('/api/settings/test', {});
+  test(form: SaveSettingsRequest): Observable<ConnectionTestResult> {
+    return this.http.post<ConnectionTestResult>('/api/settings/test', form);
   }
 }
