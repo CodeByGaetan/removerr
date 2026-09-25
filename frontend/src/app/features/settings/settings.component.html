@@ -183,39 +183,36 @@
         Durée avant suppression définitive des items mis en corbeille
       </div>
 
-      <!-- Custom slider : track 8px + fill accent + thumb white 18px -->
-      <div class="relative h-4.5 flex items-center">
-        <!-- Track -->
-        <div class="absolute left-0 right-0 h-2 rounded-full bg-white/8"></div>
-        <!-- Fill -->
-        <div
-          class="absolute left-0 h-2 rounded-full bg-accent pointer-events-none shadow-accent-glow"
-          [style.width]="retentionPct() + '%'"
-        ></div>
-        <!-- Thumb -->
-        <div
-          class="absolute top-1/2 size-4.5 -mt-2.25 rounded-full bg-white pointer-events-none shadow-thumb"
-          [style.left]="'calc(' + retentionPct() + '% - 9px)'"
-        ></div>
-        <!-- Native input (invisible, full-width, for interaction & a11y) -->
-        <input
-          type="range"
-          min="1"
-          max="365"
-          [value]="retentionDays()"
-          (input)="retentionDays.set(+$any($event.target).value)"
-          class="absolute inset-0 w-full opacity-0 cursor-pointer"
-          aria-label="Durée de rétention en jours"
-        />
-      </div>
-
-      <!-- Tick labels -->
-      <div class="flex justify-between mt-3 text-[10px] font-mono text-white/35 tracking-[0.3px]">
-        <span>1j</span>
-        <span>30j</span>
-        <span>90j</span>
-        <span>180j</span>
-        <span>365j</span>
+      <div class="flex flex-wrap items-center gap-2">
+        @for (days of retentionPresets; track days) {
+          <button
+            type="button"
+            (click)="retentionDays.set(days)"
+            [attr.aria-pressed]="retentionDays() === days"
+            class="px-3.5 py-2 rounded-full cursor-pointer font-mono text-[13px] transition-colors duration-[120ms]"
+            [class]="
+              retentionDays() === days
+                ? 'bg-accent border border-transparent text-accent-dark font-semibold shadow-accent-glow'
+                : 'bg-white/6 border border-white/10 text-white/70'
+            "
+          >
+            {{ days }}j
+          </button>
+        }
+        <label class="inline-flex items-center gap-2 ml-1 text-[13px] text-white/55">
+          <input
+            type="number"
+            inputmode="numeric"
+            [min]="retentionMin"
+            [max]="retentionMax"
+            [value]="retentionDays()"
+            (input)="onRetentionInput($any($event.target).value)"
+            (blur)="$any($event.target).value = retentionDays()"
+            class="w-18 px-3 py-2 rounded-lg bg-white/6 border border-white/10 text-white font-mono text-[13px] text-center outline-none"
+            aria-label="Durée de rétention en jours"
+          />
+          jours
+        </label>
       </div>
     </div>
   </div>

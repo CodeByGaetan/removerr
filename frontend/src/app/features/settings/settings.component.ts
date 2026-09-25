@@ -80,8 +80,17 @@ export class SettingsComponent {
     () => this.settingsService.settings()?.seerrApiKeyConfigured ?? false,
   );
 
-  // Custom slider geometry — 1 to 365 days mapped to 0..100%
-  retentionPct = computed(() => ((this.retentionDays() - 1) / 364) * 100);
+  readonly retentionPresets = [7, 14, 30, 60, 90];
+  readonly retentionMin = 1;
+  readonly retentionMax = 365;
+
+  // Out-of-range or partial input keeps the last valid value; the field is re-synced on blur.
+  onRetentionInput(raw: string) {
+    const days = Number(raw);
+    if (Number.isInteger(days) && days >= this.retentionMin && days <= this.retentionMax) {
+      this.retentionDays.set(days);
+    }
+  }
 
   onSave() {
     this.saving.set(true);
