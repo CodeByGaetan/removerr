@@ -4,7 +4,12 @@ import com.removerr.plexuser.PlexUser;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
 import org.junit.jupiter.api.Test;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Date;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -48,5 +53,20 @@ class JwtServiceTest {
 
         assertThatThrownBy(() -> jwtService.parse(expired))
                 .isInstanceOf(ExpiredJwtException.class);
+    }
+
+    @Test
+    void needsRenewal_falseForFreshToken() {
+        Claims claims = jwtService.parse(jwtService.generateToken(user(1, true)));
+
+        assertThat(jwtService.needsRenewal(claims)).isFalse();
+    }
+
+    @Test
+    void needsRenewal_trueOncePastHalfLifetime() {
+        Instant issuedAt = Instant.now().minus(Duration.ofDays(4)); // validity = 7 days
+        Claims claims = Jwts.claims().issuedAt(Date.from(issuedAt)).build();
+
+        assertThat(jwtService.needsRenewal(claims)).isTrue();
     }
 }

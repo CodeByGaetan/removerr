@@ -26,23 +26,23 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(JwtAuthFilter.class);
 
-    static final String COOKIE_NAME = "removerr_token";
-
     private final JwtService jwtService;
+    private final AuthCookieFactory authCookies;
 
-    public JwtAuthFilter(JwtService jwtService) {
+    public JwtAuthFilter(JwtService jwtService, AuthCookieFactory authCookies) {
         this.jwtService = jwtService;
+        this.authCookies = authCookies;
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain chain) throws ServletException, IOException {
-        extractToken(request).ifPresent(token -> authenticate(token, request));
+        extractToken(request).ifPresent(token -> authenticate(token, request, response));
         chain.doFilter(request, response);
     }
 
-    private void authenticate(String token, HttpServletRequest request) {
+    private void authenticate(String token, HttpServletRequest request, HttpServletResponse response) {
         try {
             Claims claims = jwtService.parse(token);
             Long userId = Long.parseLong(claims.getSubject());
@@ -54,6 +54,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
             var auth = new UsernamePasswordAuthenticationToken(userId, null, authorities);
             SecurityContextHolder.getContext().setAuthentication(auth);
+
+            if (jwtService.needsRenewal(claims)) {
+                response.addCookie(authCookies.withToken(jwtService.generateToken(userId, admin)));
+            }
         } catch (ExpiredJwtException e) {
             log.debug("Expired JWT cookie from {} on {}", clientIp(request), request.getRequestURI());
         } catch (JwtException | IllegalArgumentException e) {
@@ -65,7 +69,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private Optional<String> extractToken(HttpServletRequest request) {
         if (request.getCookies() == null) return Optional.empty();
         return Arrays.stream(request.getCookies())
-                .filter(c -> COOKIE_NAME.equals(c.getName()))
+                .filter(c -> AuthCookieFactory.COOKIE_NAME.equals(c.getName()))
                 .map(Cookie::getValue)
                 .findFirst();
     }

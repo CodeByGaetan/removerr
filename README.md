@@ -27,7 +27,7 @@ shipped as a single Docker container.
 - **Secrets encrypted at rest** — third-party API keys are stored in the database encrypted with
   AES-GCM; boot secrets (JWT, encryption key) come from the environment only.
 - **Schema owned by Liquibase** — Hibernate runs with `ddl-auto: none`; migrations are versioned XML.
-- **Stateless auth** — Plex PIN login, then a JWT in an `HttpOnly`, `SameSite=Strict` cookie.
+- **Stateless auth** — Plex PIN login, then a JWT in an `HttpOnly`, `SameSite=Strict` cookie (30-day sliding session: renewed automatically past half its lifetime).
 
 ## Tech stack
 

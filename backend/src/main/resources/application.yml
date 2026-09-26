@@ -51,7 +51,7 @@ server:
 removerr:
   jwt:
     secret: ${JWT_SECRET}
-    expiration-days: 7
+    expiration-days: 30
   encryption:
     key: ${REMOVERR_ENC_KEY}
   purge:
