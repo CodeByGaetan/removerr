@@ -44,7 +44,7 @@ public class PlexUser {
     @Column(name = "last_login_at", length = 30)
     private String lastLoginAt;
 
-    /** Plex.tv avatar URL — secondary signal to match the owner with its local server account. */
+    /** Avatar URL (plex.tv once logged in, local account before) — last-resort signal to link a plex.tv login to its local account. */
     @Column(name = "plex_thumb", length = 512)
     private String plexThumb;
 
@@ -85,6 +85,7 @@ public class PlexUser {
     public String getLastLoginAt() { return lastLoginAt; }
     public String getPlexThumb() { return plexThumb; }
 
+    public void setPlexTvId(long plexTvId) { this.plexTvId = plexTvId; }
     public void setPlexAccountId(int plexAccountId) { this.plexAccountId = plexAccountId; }
     public void setName(String name) { this.name = name; }
     public void setEmail(String email) { this.email = email; }

@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subscription, interval } from 'rxjs';
@@ -5,7 +6,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { GlassBackdropComponent } from '../../layout/glass-backdrop.component';
 import { environment } from '../../../environments/environment';
 
-type LoginState = 'idle' | 'pending' | 'expired';
+type LoginState = 'idle' | 'pending' | 'expired' | 'denied';
 
 @Component({
   selector: 'app-login',
@@ -92,9 +93,10 @@ export class LoginComponent {
           this.timerSub?.unsubscribe();
         }
       },
-      error: () => {
-        this.state.set('expired');
+      error: (err: HttpErrorResponse) => {
+        this.state.set(err.error?.code === 'ACCESS_DENIED' ? 'denied' : 'expired');
         this.timerSub?.unsubscribe();
+        this.plexWindow?.close();
       },
     });
   }

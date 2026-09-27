@@ -15,6 +15,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Predicate;
 
 @Service
 public class PlexUserService {
@@ -57,6 +58,8 @@ public class PlexUserService {
             if (existing.isPresent()) {
                 PlexUser u = existing.get();
                 u.setName(account.name());
+                // Logged-in users get their plex.tv avatar at login; keep the local one for the others.
+                if (u.getPlexTvId() == null) u.setPlexThumb(account.thumb());
                 repository.save(u);
             } else {
                 Optional<PlexUser> unlinkedOwner = repository.findByOwnerTrueAndPlexAccountIdIsNull()
@@ -66,7 +69,9 @@ public class PlexUserService {
                     owner.setPlexAccountId(account.id());
                     repository.save(owner);
                 } else {
-                    repository.save(new PlexUser(account.id(), account.name()));
+                    PlexUser created = new PlexUser(account.id(), account.name());
+                    created.setPlexThumb(account.thumb());
+                    repository.save(created);
                 }
             }
         }
@@ -78,6 +83,22 @@ public class PlexUserService {
         if (account.name().equals(owner.getName())) return true;
         if (account.name().equalsIgnoreCase(owner.getName())) return true;
         return owner.getPlexThumb() != null && owner.getPlexThumb().equals(account.thumb());
+    }
+
+    /**
+     * Finds the synced server account a plex.tv login belongs to. A shared user's local
+     * account id may equal their plex.tv id; otherwise fall back to the owner heuristics.
+     */
+    public Optional<PlexUser> findLoginCandidate(long plexTvId, String username, String thumb) {
+        List<PlexUser> unlinked = repository.findByPlexTvIdIsNull();
+        return firstMatch(unlinked, u -> u.getPlexAccountId() != null && u.getPlexAccountId() == plexTvId)
+                .or(() -> firstMatch(unlinked, u -> u.getName().equals(username)))
+                .or(() -> firstMatch(unlinked, u -> u.getName().equalsIgnoreCase(username)))
+                .or(() -> firstMatch(unlinked, u -> thumb != null && thumb.equals(u.getPlexThumb())));
+    }
+
+    private static Optional<PlexUser> firstMatch(List<PlexUser> users, Predicate<PlexUser> predicate) {
+        return users.stream().filter(predicate).findFirst();
     }
 
     private void warnIfOwnerUnlinked() {

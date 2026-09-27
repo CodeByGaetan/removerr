@@ -28,6 +28,10 @@ shipped as a single Docker container.
   AES-GCM; boot secrets (JWT, encryption key) come from the environment only.
 - **Schema owned by Liquibase** — Hibernate runs with `ddl-auto: none`; migrations are versioned XML.
 - **Stateless auth** — Plex PIN login, then a JWT in an `HttpOnly`, `SameSite=Strict` cookie (30-day sliding session: renewed automatically past half its lifetime).
+- **Shared access, allow-list based** — the first Plex login becomes the **owner**. Other accounts of
+  the Plex server are synced with no access; the owner (or any admin) grants them `USER` (trash /
+  restore) or `ADMIN` from the Users page. Roles are read from the database on every request, so
+  revoking access takes effect immediately.
 
 ## Tech stack
 
@@ -126,7 +130,7 @@ POST   /api/auth/plex/pin            # public — start Plex PIN login
 GET    /api/auth/plex/pin/{id}       # public — poll PIN status
 POST   /api/auth/logout              # public
 
-GET    /api/me                       # current admin
+GET    /api/me                       # current user
 GET    /api/library                  # movies
 GET    /api/library/shows            # shows
 

@@ -4,6 +4,7 @@ import com.removerr.audit.AuditLogService;
 import com.removerr.integration.plex.PlexLibraryClient;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -65,6 +66,39 @@ class PlexUserServiceTest {
 
         verify(repository, never()).save(any());
         verify(auditLogService, never()).log(any(), anyString(), anyString(), anyString(), anyMap());
+    }
+
+    @Test
+    void findLoginCandidate_prefersLocalIdMatchingPlexTvId() {
+        PlexUser byId = synced(555, "someone-else", null);
+        PlexUser byName = synced(12, "marie", null);
+        when(repository.findByPlexTvIdIsNull()).thenReturn(List.of(byName, byId));
+
+        assertThat(service.findLoginCandidate(555, "marie", null)).contains(byId);
+    }
+
+    @Test
+    void findLoginCandidate_fallsBackToStrictThenCaseInsensitiveName() {
+        PlexUser caseInsensitive = synced(12, "MARIE", null);
+        PlexUser strict = synced(13, "marie", null);
+        when(repository.findByPlexTvIdIsNull()).thenReturn(List.of(caseInsensitive, strict));
+
+        assertThat(service.findLoginCandidate(555, "marie", null)).contains(strict);
+    }
+
+    @Test
+    void findLoginCandidate_fallsBackToThumb() {
+        PlexUser byThumb = synced(12, "Marie (local)", "https://plex.tv/users/abc/avatar");
+        when(repository.findByPlexTvIdIsNull()).thenReturn(List.of(byThumb));
+
+        assertThat(service.findLoginCandidate(555, "marie", "https://plex.tv/users/abc/avatar")).contains(byThumb);
+        assertThat(service.findLoginCandidate(555, "marie", "https://plex.tv/users/other/avatar")).isEmpty();
+    }
+
+    private static PlexUser synced(int plexAccountId, String name, String thumb) {
+        PlexUser user = new PlexUser(plexAccountId, name);
+        user.setPlexThumb(thumb);
+        return user;
     }
 
     private PlexUser givenUser(long id, boolean owner, Role role) {

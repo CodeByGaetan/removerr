@@ -117,6 +117,30 @@
           Réessayer
         </button>
       }
+
+      <!-- State: denied -->
+      @if (state() === 'denied') {
+        <div
+          class="text-center text-[11px] tracking-[2px] uppercase font-mono mb-3 text-red-500/90"
+        >
+          Accès refusé
+        </div>
+        <h1
+          class="m-0 mb-3 text-center text-[26px] font-semibold tracking-[-0.02em] leading-[1.2] text-shadow-title"
+        >
+          Pas d'accès à Removerr
+        </h1>
+        <p class="m-0 mb-8 text-center text-[13px] leading-normal text-white/70">
+          Votre compte Plex est bien connecté, mais il n'a pas accès à cette instance. Demandez à
+          l'administrateur de vous l'ouvrir depuis la page Utilisateurs.
+        </p>
+        <button
+          (click)="retry()"
+          class="w-full px-4.5 py-3.5 border border-white/20 rounded-xl cursor-pointer bg-white/8 text-white font-semibold text-sm tracking-[-0.005em] flex items-center justify-center"
+        >
+          Réessayer
+        </button>
+      }
     </div>
 
     <!-- Footer -->

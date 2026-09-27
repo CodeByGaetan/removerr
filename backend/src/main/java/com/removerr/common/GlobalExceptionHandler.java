@@ -1,5 +1,6 @@
 package com.removerr.common;
 
+import com.removerr.auth.LoginDeniedException;
 import com.removerr.common.dto.ErrorResponse;
 import com.removerr.integration.IntegrationException;
 import com.removerr.integration.ServiceNotConfiguredException;
@@ -31,6 +32,13 @@ public class GlobalExceptionHandler {
         log.warn("Integration error: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
                 .body(new ErrorResponse("INTEGRATION_ERROR", ex.getMessage()));
+    }
+
+    @ExceptionHandler(LoginDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleLoginDenied(LoginDeniedException ex) {
+        log.info("Login denied: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(new ErrorResponse("ACCESS_DENIED", "This Plex account has no access to Removerr"));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
