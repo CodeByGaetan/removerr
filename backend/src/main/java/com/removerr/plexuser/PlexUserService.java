@@ -1,5 +1,6 @@
 package com.removerr.plexuser;
 
+import com.removerr.audit.AuditLogService;
 import com.removerr.integration.ServiceNotConfiguredException;
 import com.removerr.integration.plex.PlexLibraryClient;
 import com.removerr.integration.plex.dto.PlexAccountEntry;
@@ -22,10 +23,13 @@ public class PlexUserService {
 
     private final PlexUserRepository repository;
     private final PlexLibraryClient plexClient;
+    private final AuditLogService auditLogService;
 
-    public PlexUserService(PlexUserRepository repository, PlexLibraryClient plexClient) {
+    public PlexUserService(PlexUserRepository repository, PlexLibraryClient plexClient,
+                           AuditLogService auditLogService) {
         this.repository = repository;
         this.plexClient = plexClient;
+        this.auditLogService = auditLogService;
     }
 
     public List<PlexUserResponse> syncAndGetUsers() {
@@ -92,8 +96,29 @@ public class PlexUserService {
         return toResponse(repository.save(user));
     }
 
+    // Not @Transactional: the audit log opens its own transaction (REQUIRES_NEW), which
+    // would wait forever on the single SQLite connection held by an outer one.
+    public PlexUserResponse setRole(long id, Role role, long actorId) {
+        PlexUser user = repository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        if (user.isOwner()) {
+            throw new IllegalStateException("The owner's role cannot be changed");
+        }
+        if (user.getId() == actorId) {
+            throw new IllegalStateException("You cannot change your own role");
+        }
+        Role previous = user.getRole();
+        if (previous == role) return toResponse(user);
+
+        user.setRole(role);
+        PlexUser saved = repository.save(user);
+        auditLogService.log(actorId, "ROLE_CHANGE", "USER", String.valueOf(id),
+                AuditLogService.meta("title", user.getName(), "from", previous, "to", role));
+        return toResponse(saved);
+    }
+
     private PlexUserResponse toResponse(PlexUser u) {
         return new PlexUserResponse(u.getId(), u.getPlexAccountId(), u.getName(),
-                u.isOwner(), u.isCounted());
+                u.isOwner(), u.getRole(), u.isCounted(), u.getLastLoginAt());
     }
 }

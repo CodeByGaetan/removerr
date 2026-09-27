@@ -141,7 +141,7 @@ GET    /api/settings
 PUT    /api/settings
 POST   /api/settings/test            # same body as PUT, null fields fall back to saved values
 GET    /api/users
-PATCH  /api/users/{id}               # toggle whether a user is counted
+PATCH  /api/users/{id}               # { counted?, role? } — owner and own role are immutable
 GET    /api/audit
 ```
 
