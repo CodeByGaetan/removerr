@@ -145,7 +145,8 @@ PATCH  /api/users/{id}               # toggle whether a user is counted
 GET    /api/audit
 ```
 
-Every route outside `/api/auth/*` requires a valid `ROLE_ADMIN` JWT.
+Every route outside `/api/auth/*` requires a valid JWT. `USER` can call `GET /api/me`, `/api/library/**`,
+`/api/users`, `/api/trash` and `POST /api/trash/**` (immediate deletion excluded); everything else requires `ADMIN`.
 
 ## License
 
