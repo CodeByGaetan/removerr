@@ -48,7 +48,7 @@ export class LibraryDetailComponent implements OnDestroy {
   trashing = signal(false);
   immediate = signal(false);
 
-  isAdmin = computed(() => this.auth.me()?.admin ?? false);
+  isAdmin = this.auth.isAdmin;
 
   isMovie = computed(() => this.id().startsWith('movie-'));
   isShow = computed(() => this.id().startsWith('show-'));

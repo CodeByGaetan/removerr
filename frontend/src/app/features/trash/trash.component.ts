@@ -22,7 +22,7 @@ export class TrashComponent {
 
   readonly items = this.trashService.trashItems;
   readonly loading = this.trashService.loading;
-  readonly isAdmin = computed(() => this.auth.me()?.admin ?? false);
+  readonly isAdmin = this.auth.isAdmin;
 
   restoreTarget = signal<TrashItem | null>(null);
   restoring = signal(false);

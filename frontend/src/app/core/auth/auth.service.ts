@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, computed, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, interval, switchMap, takeWhile, tap } from 'rxjs';
@@ -27,6 +27,7 @@ export interface PollPinResponse {
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   readonly me = signal<User | null>(null);
+  readonly isAdmin = computed(() => this.me()?.admin ?? false);
   readonly loading = signal<boolean>(false);
 
   constructor(private http: HttpClient, private router: Router) {}

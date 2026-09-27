@@ -5,7 +5,7 @@
 
   <!-- Nav links -->
   <div class="flex gap-1">
-    @for (item of navItems; track item.path) {
+    @for (item of navItems(); track item.path) {
       <a [routerLink]="item.path" routerLinkActive #rla="routerLinkActive"
          class="flex items-center gap-2 px-3.5 py-1.75 rounded-full text-[13px] font-medium no-underline transition-colors"
          [style.color]="rla.isActive ? '#fff' : 'rgba(255,255,255,0.7)'"

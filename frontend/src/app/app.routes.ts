@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { adminGuard } from './core/auth/admin.guard';
 import { authGuard } from './core/auth/auth.guard';
 import { unsavedChangesGuard } from './core/guards/unsaved-changes.guard';
 
@@ -35,6 +36,7 @@ export const routes: Routes = [
           import('./features/audit/audit.component').then(
             (m) => m.AuditComponent
           ),
+        canActivate: [adminGuard],
       },
       {
         path: 'settings',
@@ -42,6 +44,7 @@ export const routes: Routes = [
           import('./features/settings/settings.component').then(
             (m) => m.SettingsComponent
           ),
+        canActivate: [adminGuard],
         canDeactivate: [unsavedChangesGuard],
       },
     ],

@@ -6,13 +6,14 @@ import { TrashService } from '../core/api/trash.service';
 interface NavItem {
   label: string;
   path: string;
+  adminOnly?: boolean;
 }
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Bibliothèque', path: '/library' },
   { label: 'Corbeille', path: '/trash' },
-  { label: 'Audit', path: '/audit' },
-  { label: 'Paramètres', path: '/settings' },
+  { label: 'Audit', path: '/audit', adminOnly: true },
+  { label: 'Paramètres', path: '/settings', adminOnly: true },
 ];
 
 @Component({
@@ -24,7 +25,9 @@ const NAV_ITEMS: NavItem[] = [
 export class GlassNavComponent {
   private auth = inject(AuthService);
   private trashService = inject(TrashService);
-  readonly navItems = NAV_ITEMS;
+  readonly navItems = computed(() =>
+    NAV_ITEMS.filter((item) => !item.adminOnly || this.auth.isAdmin()),
+  );
 
   trashCount = computed(() => this.trashService.trashItems().length);
 

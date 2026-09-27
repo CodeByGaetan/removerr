@@ -42,7 +42,7 @@ export class LibraryCardComponent {
   private readonly canHover =
     typeof window !== 'undefined' && window.matchMedia('(hover: hover)').matches;
 
-  isAdmin = computed(() => this.auth.me()?.admin ?? false);
+  isAdmin = this.auth.isAdmin;
 
   posterUrl = computed(() => this.movie()?.posterUrl ?? this.show()?.posterUrl ?? null);
   title = computed(() => this.movie()?.title ?? this.show()?.title ?? '');
