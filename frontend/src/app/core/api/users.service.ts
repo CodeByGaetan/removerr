@@ -1,32 +1,43 @@
 import { Injectable, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { tap } from 'rxjs';
+import { finalize, tap } from 'rxjs';
+
+export type Role = 'NONE' | 'USER' | 'ADMIN';
 
 export interface PlexUser {
   id: number;
   plexAccountId: number | null;
   name: string;
   owner: boolean;
+  role: Role;
   counted: boolean;
+  lastLoginAt: string | null;
 }
+
+export type UserChanges = Partial<Pick<PlexUser, 'counted' | 'role'>>;
 
 @Injectable({ providedIn: 'root' })
 export class UsersService {
   readonly allUsers = signal<PlexUser[]>([]);
+  readonly loading = signal(false);
   readonly countedUsers = computed(() => this.allUsers().filter((u) => u.counted));
   readonly totalCounted = computed(() => this.countedUsers().length);
 
   constructor(private http: HttpClient) {}
 
   loadUsers(): void {
-    this.http.get<PlexUser[]>('/api/users').subscribe({
-      next: (users) => this.allUsers.set(users),
-      error: (err) => console.warn('Failed to load users:', err),
-    });
+    this.loading.set(true);
+    this.http
+      .get<PlexUser[]>('/api/users')
+      .pipe(finalize(() => this.loading.set(false)))
+      .subscribe({
+        next: (users) => this.allUsers.set(users),
+        error: (err) => console.warn('Failed to load users:', err),
+      });
   }
 
-  setCounted(id: number, counted: boolean) {
-    return this.http.patch<PlexUser>(`/api/users/${id}`, { counted }).pipe(
+  update(id: number, changes: UserChanges) {
+    return this.http.patch<PlexUser>(`/api/users/${id}`, changes).pipe(
       tap((updated) => {
         this.allUsers.update((users) =>
           users.map((u) => (u.id === updated.id ? updated : u))

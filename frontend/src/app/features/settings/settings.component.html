@@ -119,62 +119,6 @@
       }"
     />
 
-    <!-- ── Users section (span 2) ───────────────────────────────── -->
-    <div class="md:col-span-2 px-6 py-5.5 rounded-[14px] bg-white/3 border border-white/8">
-      <div class="flex items-center gap-3 mb-5">
-        <div class="text-[15px] font-semibold text-white">Utilisateurs Plex</div>
-        <span
-          class="px-2.5 py-1 rounded-md text-[11px] font-semibold font-mono bg-state-ok/15 text-state-ok border border-state-ok/25"
-        >
-          {{ countedUsers().length }}/{{ allUsers().length }} comptés
-        </span>
-      </div>
-
-      @if (allUsers().length === 0) {
-        <div class="text-[13px] text-white/35 font-mono py-4">Aucun utilisateur synchronisé</div>
-      }
-
-      <div class="flex flex-col gap-0.5">
-        @for (user of allUsers(); track user.id) {
-          <div class="flex items-center gap-3.5 px-3 py-2.75 rounded-[10px] bg-white/2">
-            <!-- Avatar -->
-            <user-avatar [name]="user.name" [size]="36" />
-
-            <!-- Name + badges -->
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-2">
-                <span class="text-[14px] font-medium text-white">{{ user.name }}</span>
-                @if (user.owner) {
-                  <span
-                    class="text-[9px] font-mono tracking-[0.8px] uppercase px-1.75 py-0.5 rounded-sm font-semibold bg-accent/15 text-accent border border-accent/25"
-                  >
-                    Propriétaire
-                  </span>
-                }
-              </div>
-            </div>
-
-            <!-- iOS-style switch (42×24, thumb 18, accent saumon ON) -->
-            <button
-              role="switch"
-              [attr.aria-checked]="userCounted(user)"
-              [attr.aria-label]="(userCounted(user) ? 'Désactiver' : 'Activer') + ' le comptage pour ' + user.name"
-              (click)="onToggleUser(user)"
-              class="relative w-10.5 h-6 rounded-full border-0 cursor-pointer shrink-0 p-0 transition-colors duration-200"
-              [style.background]="userCounted(user) ? 'var(--color-accent)' : 'rgba(255,255,255,0.08)'"
-              [style.border]="userCounted(user) ? '1px solid transparent' : '1px solid rgba(255,255,255,0.12)'"
-              [style.box-shadow]="userCounted(user) ? '0 0 12px color-mix(in srgb, var(--color-accent) 35%, transparent), inset 0 1px 0 rgba(255,255,255,0.25)' : 'none'"
-            >
-              <div
-                class="absolute top-0.5 w-4.5 h-4.5 rounded-full bg-white transition-[left] duration-200 shadow-thumb"
-                [style.left]="userCounted(user) ? '20px' : '2px'"
-              ></div>
-            </button>
-          </div>
-        }
-      </div>
-    </div>
-
     <!-- ── Retention section (span 2) ─────────────────────────── -->
     <div class="md:col-span-2 px-6 py-5.5 rounded-[14px] bg-white/3 border border-white/8">
       <div class="flex items-baseline justify-between gap-3 mb-1.5">

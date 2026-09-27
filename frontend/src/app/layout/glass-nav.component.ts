@@ -13,6 +13,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Bibliothèque', path: '/library' },
   { label: 'Corbeille', path: '/trash' },
   { label: 'Audit', path: '/audit', adminOnly: true },
+  { label: 'Utilisateurs', path: '/users', adminOnly: true },
   { label: 'Paramètres', path: '/settings', adminOnly: true },
 ];
 

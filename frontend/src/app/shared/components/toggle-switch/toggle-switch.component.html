@@ -1,0 +1,15 @@
+<button
+  type="button"
+  role="switch"
+  [attr.aria-checked]="checked()"
+  [attr.aria-label]="label()"
+  [disabled]="disabled()"
+  (click)="toggled.emit()"
+  class="relative w-10.5 h-6 rounded-full border cursor-pointer shrink-0 p-0 transition-colors duration-200 disabled:cursor-default"
+  [class]="checked() ? 'bg-accent border-transparent shadow-accent-glow' : 'bg-white/8 border-white/12'"
+>
+  <span
+    class="absolute top-0.5 w-4.5 h-4.5 rounded-full bg-white transition-[left] duration-200 shadow-thumb"
+    [class]="checked() ? 'left-5' : 'left-0.5'"
+  ></span>
+</button>

@@ -2,7 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { AuditEntry, AuditService } from '../../core/api/audit.service';
 import { ActionChipComponent } from '../../shared/components/action-chip/action-chip.component';
 
-const FILTERS = ['Tout', 'TRASH', 'RESTORE', 'PURGE', 'LOGIN'] as const;
+const FILTERS = ['Tout', 'TRASH', 'RESTORE', 'PURGE', 'ROLE_CHANGE', 'LOGIN'] as const;
 type Filter = (typeof FILTERS)[number];
 
 @Component({

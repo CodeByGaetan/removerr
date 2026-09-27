@@ -60,7 +60,7 @@ backend/  (Spring Boot, com.removerr)
 frontend/ (Angular)
 ├── core/      API services, auth, layout
 ├── shared/    reusable components
-├── features/  library, trash, settings, audit, login
+├── features/  library, trash, users, settings, audit, login
 └── layout/    desktop sidebar + mobile bottom nav
 ```
 

@@ -22,6 +22,10 @@ export const messages = {
     saveError: 'Erreur lors de la sauvegarde',
     testError: 'Erreur lors du test',
   },
+  users: {
+    roleUpdated: (name: string, role: string) => `Rôle de ${name} : ${role}`,
+    updateError: 'Erreur lors de la mise à jour de l\'utilisateur',
+  },
   library: {
     moviesLoadError: 'Impossible de charger les films.',
     showsLoadError: 'Impossible de charger les séries.',

@@ -1,40 +1,25 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, effect, inject, signal } from '@angular/core';
-import { Observable, forkJoin, timer } from 'rxjs';
+import { forkJoin, timer } from 'rxjs';
 import { ConnectionTestResult, SaveSettingsRequest, SettingsService } from '../../core/api/settings.service';
-import { PlexUser, UsersService } from '../../core/api/users.service';
-import { AuthService } from '../../core/auth/auth.service';
 import { LeaveConfirmable } from '../../core/guards/unsaved-changes.guard';
 import { messages } from '../../core/messages';
 import { ToastService } from '../../core/services/toast.service';
 import { ConfirmModalComponent } from '../../shared/components/confirm-modal/confirm-modal.component';
-import { UserAvatarComponent } from '../../shared/components/user-avatar/user-avatar.component';
 
 @Component({
   selector: 'app-settings',
   standalone: true,
-  imports: [NgTemplateOutlet, ConfirmModalComponent, UserAvatarComponent],
+  imports: [NgTemplateOutlet, ConfirmModalComponent],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.css',
   host: { '(window:beforeunload)': 'onBeforeUnload($event)' },
 })
 export class SettingsComponent implements LeaveConfirmable {
   private settingsService = inject(SettingsService);
-  private usersService = inject(UsersService);
-  private auth = inject(AuthService);
   private toast = inject(ToastService);
 
   readonly loading = this.settingsService.loading;
-  readonly allUsers = this.usersService.allUsers;
-
-  pendingCounted = signal<Map<number, boolean>>(new Map());
-
-  readonly countedUsers = computed(() => {
-    const m = this.pendingCounted();
-    return this.usersService.allUsers().filter((u) =>
-      m.has(u.id) ? m.get(u.id)! : u.counted,
-    );
-  });
 
   // Form fields
   plexUrl = signal('');
@@ -67,16 +52,12 @@ export class SettingsComponent implements LeaveConfirmable {
       this.retentionDays() !== (s.trashRetentionDays ?? 30) ||
       (this.editRadarrKey() && this.radarrKey() !== '') ||
       (this.editSonarrKey() && this.sonarrKey() !== '') ||
-      (this.editSeerrKey() && this.seerrKey() !== '') ||
-      this.pendingCounted().size > 0
+      (this.editSeerrKey() && this.seerrKey() !== '')
     );
   });
 
   constructor() {
     this.settingsService.load();
-    if (this.usersService.allUsers().length === 0) {
-      this.usersService.loadUsers();
-    }
 
     effect(() => {
       const s = this.settingsService.settings();
@@ -130,19 +111,10 @@ export class SettingsComponent implements LeaveConfirmable {
   onSave() {
     this.saving.set(true);
 
-    const requests: Observable<unknown>[] = [
-      this.settingsService.save(this.formValues()),
-      ...Array.from(this.pendingCounted().entries()).map(([id, counted]) =>
-        this.usersService.setCounted(id, counted),
-      ),
-    ];
-
-    forkJoin(requests).subscribe({
+    this.settingsService.save(this.formValues()).subscribe({
       next: () => {
         this.toast.show(messages.settings.saved);
-        this.pendingCounted.set(new Map());
         this.settingsService.load();
-        this.auth.fetchMe().subscribe();
         this.saving.set(false);
       },
       error: () => {
@@ -168,11 +140,6 @@ export class SettingsComponent implements LeaveConfirmable {
     });
   }
 
-  userCounted(user: PlexUser): boolean {
-    const m = this.pendingCounted();
-    return m.has(user.id) ? m.get(user.id)! : user.counted;
-  }
-
   confirmLeave(): boolean | Promise<boolean> {
     if (!this.hasUnsavedChanges()) return true;
     return new Promise((resolve) => this.leaveResolver.set(resolve));
@@ -188,19 +155,6 @@ export class SettingsComponent implements LeaveConfirmable {
     event.preventDefault();
     // Older Safari only shows the native prompt when returnValue is set.
     event.returnValue = '';
-  }
-
-  onToggleUser(user: PlexUser) {
-    const next = !this.userCounted(user);
-    this.pendingCounted.update((m) => {
-      const updated = new Map(m);
-      if (user.counted === next) {
-        updated.delete(user.id);
-      } else {
-        updated.set(user.id, next);
-      }
-      return updated;
-    });
   }
 
   statusClass(status: string): string {

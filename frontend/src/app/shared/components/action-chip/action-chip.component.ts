@@ -18,6 +18,7 @@ export class ActionChipComponent {
       case 'PURGE_SCHEDULED': return 'var(--color-state-warn)';
       case 'PURGE':           return 'var(--color-state-warn)';
       case 'LOGIN':           return 'var(--color-state-info)';
+      case 'ROLE_CHANGE':     return 'var(--color-state-info)';
       default:                return 'rgba(255,255,255,0.6)';
     }
   });
