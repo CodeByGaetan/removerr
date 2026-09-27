@@ -22,25 +22,23 @@ class JwtServiceTest {
 
     private final JwtService jwtService = new JwtService(SECRET, 7);
 
-    private static PlexUser user(long id, boolean admin) {
+    private static PlexUser user(long id) {
         PlexUser user = mock(PlexUser.class);
         when(user.getId()).thenReturn(id);
-        when(user.isAdmin()).thenReturn(admin);
         return user;
     }
 
     @Test
-    void generateThenParse_roundtripsSubjectAndAdminClaim() {
-        Claims claims = jwtService.parse(jwtService.generateToken(user(7, true)));
+    void generateThenParse_roundtripsSubject() {
+        Claims claims = jwtService.parse(jwtService.generateToken(user(7)));
 
         assertThat(claims.getSubject()).isEqualTo("7");
-        assertThat(claims.get(JwtService.CLAIM_ADMIN, Boolean.class)).isTrue();
     }
 
     @Test
     void parse_rejectsTokenSignedWithAnotherSecret() {
         String forged = new JwtService("another-secret-another-secret-xyz-123", 7)
-                .generateToken(user(1, false));
+                .generateToken(user(1));
 
         assertThatThrownBy(() -> jwtService.parse(forged))
                 .isInstanceOf(JwtException.class);
@@ -49,7 +47,7 @@ class JwtServiceTest {
     @Test
     void parse_rejectsExpiredToken() {
         // Negative expiration → the token is already expired when issued.
-        String expired = new JwtService(SECRET, -1).generateToken(user(1, false));
+        String expired = new JwtService(SECRET, -1).generateToken(user(1));
 
         assertThatThrownBy(() -> jwtService.parse(expired))
                 .isInstanceOf(ExpiredJwtException.class);
@@ -57,7 +55,7 @@ class JwtServiceTest {
 
     @Test
     void needsRenewal_falseForFreshToken() {
-        Claims claims = jwtService.parse(jwtService.generateToken(user(1, true)));
+        Claims claims = jwtService.parse(jwtService.generateToken(user(1)));
 
         assertThat(jwtService.needsRenewal(claims)).isFalse();
     }

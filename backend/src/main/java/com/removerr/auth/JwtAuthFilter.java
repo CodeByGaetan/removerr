@@ -1,5 +1,8 @@
 package com.removerr.auth;
 
+import com.removerr.plexuser.PlexUser;
+import com.removerr.plexuser.PlexUserRepository;
+import com.removerr.plexuser.Role;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
@@ -28,10 +31,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final AuthCookieFactory authCookies;
+    private final PlexUserRepository plexUserRepository;
 
-    public JwtAuthFilter(JwtService jwtService, AuthCookieFactory authCookies) {
+    public JwtAuthFilter(JwtService jwtService, AuthCookieFactory authCookies,
+                         PlexUserRepository plexUserRepository) {
         this.jwtService = jwtService;
         this.authCookies = authCookies;
+        this.plexUserRepository = plexUserRepository;
     }
 
     @Override
@@ -46,17 +52,22 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         try {
             Claims claims = jwtService.parse(token);
             Long userId = Long.parseLong(claims.getSubject());
-            boolean admin = Boolean.TRUE.equals(claims.get(JwtService.CLAIM_ADMIN, Boolean.class));
 
-            var authorities = admin
-                    ? List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
-                    : List.of(new SimpleGrantedAuthority("ROLE_USER"));
+            // Role is read from the DB, not the token: revoking access or changing a role
+            // takes effect on the next request, even with a long-lived sliding session.
+            Optional<PlexUser> user = plexUserRepository.findById(userId)
+                    .filter(u -> u.getRole() != Role.NONE);
+            if (user.isEmpty()) {
+                log.debug("JWT cookie for revoked or unknown user {} from {}", userId, clientIp(request));
+                return;
+            }
 
-            var auth = new UsernamePasswordAuthenticationToken(userId, null, authorities);
+            var authority = new SimpleGrantedAuthority("ROLE_" + user.get().getRole().name());
+            var auth = new UsernamePasswordAuthenticationToken(userId, null, List.of(authority));
             SecurityContextHolder.getContext().setAuthentication(auth);
 
             if (jwtService.needsRenewal(claims)) {
-                response.addCookie(authCookies.withToken(jwtService.generateToken(userId, admin)));
+                response.addCookie(authCookies.withToken(jwtService.generateToken(userId)));
             }
         } catch (ExpiredJwtException e) {
             log.debug("Expired JWT cookie from {} on {}", clientIp(request), request.getRequestURI());

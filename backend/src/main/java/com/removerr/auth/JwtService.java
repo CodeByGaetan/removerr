@@ -16,7 +16,6 @@ import java.util.Date;
 @Service
 public class JwtService {
 
-    static final String CLAIM_ADMIN = "admin";
     private static final String ISSUER = "removerr";
 
     private final SecretKey signingKey;
@@ -34,15 +33,14 @@ public class JwtService {
     }
 
     public String generateToken(PlexUser user) {
-        return generateToken(user.getId(), user.isAdmin());
+        return generateToken(user.getId());
     }
 
-    public String generateToken(long userId, boolean admin) {
+    public String generateToken(long userId) {
         Instant now = Instant.now();
         return Jwts.builder()
                 .issuer(ISSUER)
                 .subject(String.valueOf(userId))
-                .claim(CLAIM_ADMIN, admin)
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plus(validity)))
                 .signWith(signingKey)
