@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.27.xsd">
+
+    <changeSet id="002-user-roles" author="removerr">
+
+        <!-- is_admin used to mean "the account that bootstrapped the instance".
+             It becomes is_owner; access rights now live in role.
+             Native SQL on purpose: Liquibase's renameColumn / addColumn rebuild the table
+             on SQLite, which fails on the foreign keys pointing to plex_user. -->
+        <sql>ALTER TABLE plex_user RENAME COLUMN is_admin TO is_owner</sql>
+
+        <!-- NONE = no access to Removerr, USER = trash/restore, ADMIN = everything -->
+        <sql>ALTER TABLE plex_user ADD COLUMN role VARCHAR(10) NOT NULL DEFAULT 'NONE'</sql>
+
+        <update tableName="plex_user">
+            <column name="role" value="ADMIN"/>
+            <where>is_owner = 1</where>
+        </update>
+
+    </changeSet>
+
+</databaseChangeLog>

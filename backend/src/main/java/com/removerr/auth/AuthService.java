@@ -40,7 +40,7 @@ public class AuthService {
         if (pin.authToken() == null) return PollResult.pending();
 
         PlexUserAccount info = plexClient.getUserInfo(pin.authToken());
-        PlexUser user = resolveAdmin(info, pin.authToken());
+        PlexUser user = resolveUser(info, pin.authToken());
         String jwt = jwtService.generateToken(user);
         int countedTotal = (int) plexUserRepository.countByCounted(true);
         return PollResult.success(toMeResponse(user, countedTotal), jwt);
@@ -61,13 +61,13 @@ public class AuthService {
         }
     }
 
-    private PlexUser resolveAdmin(PlexUserAccount info, String plexToken) {
+    private PlexUser resolveUser(PlexUserAccount info, String plexToken) {
         String now = Instant.now().toString();
         String encryptedToken = encryptor.encrypt(plexToken);
 
         return plexUserRepository.findByPlexTvId(info.id())
                 .map(existing -> {
-                    // Admin re-login — update token and profile
+                    // Re-login — update token and profile
                     existing.setPlexTokenEncrypted(encryptedToken);
                     existing.setLastLoginAt(now);
                     existing.setEmail(info.email());
@@ -75,11 +75,11 @@ public class AuthService {
                     return plexUserRepository.save(existing);
                 })
                 .orElseGet(() -> {
-                    if (plexUserRepository.existsByAdminTrue()) {
+                    if (plexUserRepository.existsByOwnerTrue()) {
                         throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                                "This Removerr instance already has an administrator");
+                                "This Removerr instance already has an owner");
                     }
-                    // First login — create admin row with global Plex.tv ID.
+                    // First login — create the owner row with global Plex.tv ID.
                     // plex_account_id (local server ID) will be linked on next user sync.
                     return plexUserRepository.save(
                             new PlexUser(info.id(), info.username(), info.email(),
@@ -88,6 +88,6 @@ public class AuthService {
     }
 
     private MeResponse toMeResponse(PlexUser user, int countedTotal) {
-        return new MeResponse(user.getId(), user.getName(), user.getEmail(), user.isAdmin(), countedTotal);
+        return new MeResponse(user.getId(), user.getName(), user.getEmail(), user.isAdmin(), user.isOwner(), countedTotal);
     }
 }

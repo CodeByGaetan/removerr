@@ -78,7 +78,7 @@ public class PlexLibraryClient {
         PlexHistoryContainer response = client.get()
                 .uri(serverUrl() + "/status/sessions/history/all?sort=viewedAt:asc" +
                      "&X-Plex-Container-Start=0&X-Plex-Container-Size=" + limit)
-                .header("X-Plex-Token", adminToken())
+                .header("X-Plex-Token", ownerToken())
                 .retrieve()
                 .onStatus(HttpStatusCode::is4xxClientError, resp ->
                         Mono.error(new IntegrationException("Plex auth error " + resp.statusCode())))
@@ -92,7 +92,7 @@ public class PlexLibraryClient {
     private PlexMediaContainer get(String path) {
         return client.get()
                 .uri(serverUrl() + path)
-                .header("X-Plex-Token", adminToken())
+                .header("X-Plex-Token", ownerToken())
                 .retrieve()
                 .onStatus(HttpStatusCode::is4xxClientError, resp ->
                         Mono.error(new IntegrationException("Plex auth error " + resp.statusCode())))
@@ -106,12 +106,12 @@ public class PlexLibraryClient {
         return url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
     }
 
-    public Optional<String> findAdminToken() {
-        return plexUserRepository.findByAdminTrue()
+    public Optional<String> findOwnerToken() {
+        return plexUserRepository.findByOwnerTrue()
                 .map(u -> encryptor.decrypt(u.getPlexTokenEncrypted()));
     }
 
-    private String adminToken() {
-        return findAdminToken().orElseThrow(() -> new IntegrationException("No admin user found"));
+    private String ownerToken() {
+        return findOwnerToken().orElseThrow(() -> new IntegrationException("No owner user found"));
     }
 }

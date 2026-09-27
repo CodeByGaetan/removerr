@@ -9,6 +9,7 @@ export interface User {
   email: string;
   avatarUrl: string;
   admin: boolean;
+  owner: boolean;
   countedUsersTotal: number;
 }
 

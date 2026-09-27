@@ -40,7 +40,7 @@ public class PlexUserService {
 
         if (!accounts.isEmpty()) {
             upsertAccounts(accounts);
-            warnIfAdminUnlinked();
+            warnIfOwnerUnlinked();
         }
         return repository.findAll().stream().map(this::toResponse).toList();
     }
@@ -55,12 +55,12 @@ public class PlexUserService {
                 u.setName(account.name());
                 repository.save(u);
             } else {
-                Optional<PlexUser> unlinkedAdmin = repository.findByAdminTrueAndPlexAccountIdIsNull()
-                        .filter(admin -> matchesAdmin(account, admin));
-                if (unlinkedAdmin.isPresent()) {
-                    PlexUser admin = unlinkedAdmin.get();
-                    admin.setPlexAccountId(account.id());
-                    repository.save(admin);
+                Optional<PlexUser> unlinkedOwner = repository.findByOwnerTrueAndPlexAccountIdIsNull()
+                        .filter(owner -> matchesOwner(account, owner));
+                if (unlinkedOwner.isPresent()) {
+                    PlexUser owner = unlinkedOwner.get();
+                    owner.setPlexAccountId(account.id());
+                    repository.save(owner);
                 } else {
                     repository.save(new PlexUser(account.id(), account.name()));
                 }
@@ -70,17 +70,17 @@ public class PlexUserService {
 
     // Tries name strict, then name case-insensitive, then thumb URL — Plex /accounts
     // doesn't expose the global plex.tv user id, so we rely on these heuristics.
-    private boolean matchesAdmin(PlexAccountEntry account, PlexUser admin) {
-        if (account.name().equals(admin.getName())) return true;
-        if (account.name().equalsIgnoreCase(admin.getName())) return true;
-        return admin.getPlexThumb() != null && admin.getPlexThumb().equals(account.thumb());
+    private boolean matchesOwner(PlexAccountEntry account, PlexUser owner) {
+        if (account.name().equals(owner.getName())) return true;
+        if (account.name().equalsIgnoreCase(owner.getName())) return true;
+        return owner.getPlexThumb() != null && owner.getPlexThumb().equals(account.thumb());
     }
 
-    private void warnIfAdminUnlinked() {
-        repository.findByAdminTrueAndPlexAccountIdIsNull().ifPresent(admin ->
-                log.warn("Admin '{}' (plexTvId={}) is not linked to a local Plex account. "
+    private void warnIfOwnerUnlinked() {
+        repository.findByOwnerTrueAndPlexAccountIdIsNull().ifPresent(owner ->
+                log.warn("Owner '{}' (plexTvId={}) is not linked to a local Plex account. "
                         + "Their views will not be counted. Check that the plex.tv username matches "
-                        + "the local server account name.", admin.getName(), admin.getPlexTvId()));
+                        + "the local server account name.", owner.getName(), owner.getPlexTvId()));
     }
 
     @Transactional
@@ -94,6 +94,6 @@ public class PlexUserService {
 
     private PlexUserResponse toResponse(PlexUser u) {
         return new PlexUserResponse(u.getId(), u.getPlexAccountId(), u.getName(),
-                u.isAdmin(), u.isCounted());
+                u.isOwner(), u.isCounted());
     }
 }

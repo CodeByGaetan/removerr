@@ -24,8 +24,13 @@ public class PlexUser {
     @Column
     private String email;
 
-    @Column(name = "is_admin", nullable = false)
-    private boolean admin;
+    /** Account that bootstrapped the instance — its role cannot be changed. */
+    @Column(name = "is_owner", nullable = false)
+    private boolean owner;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    private Role role = Role.NONE;
 
     @Column(nullable = false)
     private boolean counted = true;
@@ -39,7 +44,7 @@ public class PlexUser {
     @Column(name = "last_login_at", length = 30)
     private String lastLoginAt;
 
-    /** Plex.tv avatar URL — secondary signal to match the admin with its local server account. */
+    /** Plex.tv avatar URL — secondary signal to match the owner with its local server account. */
     @Column(name = "plex_thumb", length = 512)
     private String plexThumb;
 
@@ -50,10 +55,9 @@ public class PlexUser {
         this.plexAccountId = plexAccountId;
         this.name = name;
         this.counted = true;
-        this.admin = false;
     }
 
-    /** Constructor for the admin user created at first login (global Plex.tv ID known). */
+    /** Constructor for the owner created at first login (global Plex.tv ID known). */
     public PlexUser(long plexTvId, String name, String email, String plexThumb,
                     String plexTokenEncrypted, String createdAt) {
         this.plexTvId = plexTvId;
@@ -63,7 +67,8 @@ public class PlexUser {
         this.plexTokenEncrypted = plexTokenEncrypted;
         this.createdAt = createdAt;
         this.counted = true;
-        this.admin = true;
+        this.owner = true;
+        this.role = Role.ADMIN;
     }
 
     public Long getId() { return id; }
@@ -71,7 +76,9 @@ public class PlexUser {
     public Integer getPlexAccountId() { return plexAccountId; }
     public String getName() { return name; }
     public String getEmail() { return email; }
-    public boolean isAdmin() { return admin; }
+    public boolean isOwner() { return owner; }
+    public Role getRole() { return role; }
+    public boolean isAdmin() { return role == Role.ADMIN; }
     public boolean isCounted() { return counted; }
     public String getPlexTokenEncrypted() { return plexTokenEncrypted; }
     public String getCreatedAt() { return createdAt; }
@@ -81,7 +88,7 @@ public class PlexUser {
     public void setPlexAccountId(int plexAccountId) { this.plexAccountId = plexAccountId; }
     public void setName(String name) { this.name = name; }
     public void setEmail(String email) { this.email = email; }
-    public void setAdmin(boolean admin) { this.admin = admin; }
+    public void setRole(Role role) { this.role = role; }
     public void setCounted(boolean counted) { this.counted = counted; }
     public void setPlexTokenEncrypted(String plexTokenEncrypted) { this.plexTokenEncrypted = plexTokenEncrypted; }
     public void setLastLoginAt(String lastLoginAt) { this.lastLoginAt = lastLoginAt; }

@@ -45,7 +45,7 @@ public class AppSettingController {
     public ConnectionTestResponse testConnections(@RequestBody UpdateSettingsRequest form) {
         return new ConnectionTestResponse(
                 testService(formOrSaved(form.plexServerUrl(), AppSettingKey.PLEX_SERVER_URL),
-                        "/library/sections", "X-Plex-Token", plexLibraryClient.findAdminToken().orElse(null)),
+                        "/library/sections", "X-Plex-Token", plexLibraryClient.findOwnerToken().orElse(null)),
                 testService(formOrSaved(form.radarrUrl(), AppSettingKey.RADARR_URL),
                         "/api/v3/system/status", "X-Api-Key",
                         formOrSaved(form.radarrApiKey(), AppSettingKey.RADARR_API_KEY)),

@@ -4,6 +4,6 @@ public record PlexUserResponse(
         long id,
         Integer plexAccountId,
         String name,
-        boolean admin,
+        boolean owner,
         boolean counted
 ) {}

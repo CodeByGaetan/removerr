@@ -6,7 +6,7 @@ export interface PlexUser {
   id: number;
   plexAccountId: number | null;
   name: string;
-  admin: boolean;
+  owner: boolean;
   counted: boolean;
 }
 
