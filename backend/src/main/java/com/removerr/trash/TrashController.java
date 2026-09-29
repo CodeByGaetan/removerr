@@ -1,5 +1,6 @@
 package com.removerr.trash;
 
+import com.removerr.job.JobRunner;
 import com.removerr.trash.dto.PurgeResult;
 import com.removerr.trash.dto.TrashItemResponse;
 import com.removerr.trash.dto.TrashMovieRequest;
@@ -20,11 +21,13 @@ import java.util.List;
 public class TrashController {
 
     private final TrashService trashService;
-    private final PurgeService purgeService;
+    private final PurgeJob purgeJob;
+    private final JobRunner jobRunner;
 
-    public TrashController(TrashService trashService, PurgeService purgeService) {
+    public TrashController(TrashService trashService, PurgeJob purgeJob, JobRunner jobRunner) {
         this.trashService = trashService;
-        this.purgeService = purgeService;
+        this.purgeJob = purgeJob;
+        this.jobRunner = jobRunner;
     }
 
     @PostMapping("/api/trash/movies")
@@ -59,7 +62,7 @@ public class TrashController {
 
     @PostMapping("/api/admin/purge")
     public PurgeResult runPurge(@AuthenticationPrincipal Long userId) {
-        return purgeService.purge(true, userId);
+        return jobRunner.runNow(purgeJob, userId);
     }
 
     @GetMapping("/api/trash")

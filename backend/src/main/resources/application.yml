@@ -18,6 +18,12 @@ spring:
     change-log: classpath:db/changelog/db.changelog-master.xml
     enabled: true
 
+  task:
+    scheduling:
+      pool:
+        # One thread per job, so a long manual purge never delays another job.
+        size: 2
+
   cache:
     type: caffeine
     caffeine:

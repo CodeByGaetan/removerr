@@ -147,6 +147,8 @@ POST   /api/settings/test            # same body as PUT, null fields fall back t
 GET    /api/users
 PATCH  /api/users/{id}               # { counted?, role? } — owner and own role are immutable
 GET    /api/audit
+GET    /api/jobs                     # scheduled jobs: running, next run, last run
+POST   /api/jobs/{key}/run           # run a job now, in the background (202)
 ```
 
 Every route outside `/api/auth/*` requires a valid JWT. `USER` can call `GET /api/me`, `/api/library/**`,
