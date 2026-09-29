@@ -1,4 +1,4 @@
-import { MS_PER_DAY, relativeDate } from './date.util';
+import { MS_PER_DAY, dayAndTime, relativeDate } from './date.util';
 
 /** ISO string for a date `days` in the past. */
 function daysAgo(days: number): string {
@@ -28,5 +28,20 @@ describe('relativeDate', () => {
 
   it('uses the plural for several years', () => {
     expect(relativeDate(daysAgo(1100))).toBe('il y a 3 ans');
+  });
+});
+
+describe('dayAndTime', () => {
+  const now = new Date(2026, 9, 12, 15, 0);
+  const at = (day: number, hour: number, minute = 0) => new Date(2026, 9, day, hour, minute).toISOString();
+
+  it('names today, yesterday and tomorrow', () => {
+    expect(dayAndTime(at(12, 15, 37), now)).toBe("aujourd'hui à 15:37");
+    expect(dayAndTime(at(11, 3), now)).toBe('hier à 03:00');
+    expect(dayAndTime(at(13, 3), now)).toBe('demain à 03:00');
+  });
+
+  it('falls back to the date further away', () => {
+    expect(dayAndTime(at(9, 3), now)).toBe('le 09/10 à 03:00');
   });
 });

@@ -6,11 +6,12 @@ import { LeaveConfirmable } from '../../core/guards/unsaved-changes.guard';
 import { messages } from '../../core/messages';
 import { ToastService } from '../../core/services/toast.service';
 import { ConfirmModalComponent } from '../../shared/components/confirm-modal/confirm-modal.component';
+import { ScheduledJobsComponent } from './scheduled-jobs/scheduled-jobs.component';
 
 @Component({
   selector: 'app-settings',
   standalone: true,
-  imports: [NgTemplateOutlet, ConfirmModalComponent],
+  imports: [NgTemplateOutlet, ConfirmModalComponent, ScheduledJobsComponent],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.css',
   host: { '(window:beforeunload)': 'onBeforeUnload($event)' },

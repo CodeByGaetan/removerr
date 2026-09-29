@@ -26,6 +26,15 @@ export const messages = {
     roleUpdated: (name: string, role: string) => `Rôle de ${name} : ${role}`,
     updateError: 'Erreur lors de la mise à jour de l\'utilisateur',
   },
+  jobs: {
+    names: {
+      purge: 'Purge de la corbeille',
+      'user-sync': 'Synchronisation des utilisateurs',
+    },
+    done: (name: string) => `${name} terminée`,
+    failed: (name: string) => `${name} : échec, voir les logs`,
+    runError: 'Impossible de lancer la tâche',
+  },
   library: {
     moviesLoadError: 'Impossible de charger les films.',
     showsLoadError: 'Impossible de charger les séries.',

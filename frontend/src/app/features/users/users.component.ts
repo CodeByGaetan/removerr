@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { JobsService } from '../../core/api/jobs.service';
 import { PlexUser, Role, UserChanges, UsersService } from '../../core/api/users.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { messages } from '../../core/messages';
@@ -23,6 +24,7 @@ export class UsersComponent {
   private usersService = inject(UsersService);
   private auth = inject(AuthService);
   private toast = inject(ToastService);
+  private jobsService = inject(JobsService);
 
   readonly loading = this.usersService.loading;
   // Display order of the role selector, from least to most privileged.
@@ -37,9 +39,19 @@ export class UsersComponent {
   readonly accessCount = computed(() => this.users().filter((u) => u.role !== 'NONE').length);
 
   private pendingIds = signal<ReadonlySet<number>>(new Set());
+  readonly syncing = signal(false);
 
   constructor() {
     this.usersService.loadUsers();
+  }
+
+  // Reloads even on failure: the sync may have imported accounts before failing.
+  onSync() {
+    this.syncing.set(true);
+    this.jobsService.runAndNotify('user-sync').subscribe(() => {
+      this.syncing.set(false);
+      this.usersService.loadUsers();
+    });
   }
 
   roleLabel(role: Role): string {
