@@ -47,12 +47,12 @@ public class AuthService {
         PlexUserAccount info = plexClient.getUserInfo(pin.authToken());
         PlexUser user = resolveUser(info, pin.authToken());
         String jwt = jwtService.generateToken(user);
-        int countedTotal = (int) plexUserRepository.countByCounted(true);
+        int countedTotal = (int) plexUserRepository.countByCountedTrueAndServerAccessTrue();
         return PollResult.success(toMeResponse(user, countedTotal), jwt);
     }
 
     public MeResponse getMe(Long userId) {
-        int countedTotal = (int) plexUserRepository.countByCounted(true);
+        int countedTotal = (int) plexUserRepository.countByCountedTrueAndServerAccessTrue();
         return plexUserRepository.findById(userId)
                 .map(user -> toMeResponse(user, countedTotal))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));

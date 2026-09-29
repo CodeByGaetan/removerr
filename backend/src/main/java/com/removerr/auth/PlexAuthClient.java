@@ -1,6 +1,7 @@
 package com.removerr.auth;
 
 import com.removerr.auth.dto.PlexPin;
+import com.removerr.auth.dto.PlexSharedServer;
 import com.removerr.auth.dto.PlexUserAccount;
 import com.removerr.setting.AppSettingKey;
 import com.removerr.setting.AppSettingService;
@@ -8,7 +9,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Component
 public class PlexAuthClient {
@@ -70,6 +74,29 @@ public class PlexAuthClient {
             throw new IllegalStateException("Empty user account response from Plex");
         }
         return account;
+    }
+
+    /**
+     * plex.tv ids of the users with an accepted share on the given server. The server's own
+     * /accounts can't answer this: it keeps every account that ever had history on it.
+     */
+    public Set<Long> getSharedUserIds(String ownerToken, String machineIdentifier) {
+        List<PlexSharedServer> shares = plexClient.get()
+                .uri("/api/v2/shared_servers/owned/accepted")
+                .header("X-Plex-Token", ownerToken)
+                .header("X-Plex-Client-Identifier", getOrCreateClientId())
+                .retrieve()
+                .bodyToFlux(PlexSharedServer.class)
+                .collectList()
+                .block();
+        if (shares == null) {
+            throw new IllegalStateException("Empty shared servers response from Plex");
+        }
+        return shares.stream()
+                .filter(s -> machineIdentifier.equals(s.machineIdentifier()))
+                .filter(s -> s.deletedAt() == null && s.leftAt() == null)
+                .map(PlexSharedServer::invitedId)
+                .collect(Collectors.toSet());
     }
 
     public String buildAuthUrl(String code) {

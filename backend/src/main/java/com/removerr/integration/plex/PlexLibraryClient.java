@@ -74,6 +74,15 @@ public class PlexLibraryClient {
         return accounts != null ? accounts : List.of();
     }
 
+    public String getMachineIdentifier() {
+        PlexMediaContainer response = get("/identity");
+        if (response == null || response.mediaContainer() == null
+                || response.mediaContainer().machineIdentifier() == null) {
+            throw new IntegrationException("Plex server returned no machine identifier");
+        }
+        return response.mediaContainer().machineIdentifier();
+    }
+
     public List<PlexHistoryEntry> getViewHistory(int limit) {
         PlexHistoryContainer response = client.get()
                 .uri(serverUrl() + "/status/sessions/history/all?sort=viewedAt:asc" +

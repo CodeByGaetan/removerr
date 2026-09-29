@@ -203,7 +203,7 @@ public class MediaAggregationService {
     // ── Private helpers — viewer computation ─────────────────────────────────
 
     private Map<Integer, Long> loadCountedAccountToUserId() {
-        return plexUserRepository.findByCountedTrueAndPlexAccountIdIsNotNull().stream()
+        return plexUserRepository.findByCountedTrueAndServerAccessTrueAndPlexAccountIdIsNotNull().stream()
                 .collect(Collectors.toMap(PlexUser::getPlexAccountId, PlexUser::getId));
     }
 

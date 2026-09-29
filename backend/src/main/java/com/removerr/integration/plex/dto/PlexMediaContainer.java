@@ -11,6 +11,7 @@ public record PlexMediaContainer(
     public record Container(
             @JsonProperty("Directory") List<PlexSection> directories,
             @JsonProperty("Metadata")  List<PlexMetadata> metadata,
-            @JsonProperty("Account")   List<PlexAccountEntry> accounts
+            @JsonProperty("Account")   List<PlexAccountEntry> accounts,
+            @JsonProperty("machineIdentifier") String machineIdentifier
     ) {}
 }

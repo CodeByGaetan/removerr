@@ -1,11 +1,13 @@
 package com.removerr.plexuser;
 
 import com.removerr.audit.AuditLogService;
+import com.removerr.auth.PlexAuthClient;
 import com.removerr.integration.plex.PlexLibraryClient;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -26,8 +28,10 @@ class PlexUserServiceTest {
 
     private final PlexUserRepository repository = mock(PlexUserRepository.class);
     private final AuditLogService auditLogService = mock(AuditLogService.class);
+    private final PlexLibraryClient plexClient = mock(PlexLibraryClient.class);
+    private final PlexAuthClient plexTvClient = mock(PlexAuthClient.class);
     private final PlexUserService service =
-            new PlexUserService(repository, mock(PlexLibraryClient.class), auditLogService);
+            new PlexUserService(repository, plexClient, plexTvClient, auditLogService);
 
     @Test
     void setRole_updatesRoleAndLogsChange() {
@@ -93,6 +97,73 @@ class PlexUserServiceTest {
 
         assertThat(service.findLoginCandidate(555, "marie", "https://plex.tv/users/abc/avatar")).contains(byThumb);
         assertThat(service.findLoginCandidate(555, "marie", "https://plex.tv/users/other/avatar")).isEmpty();
+    }
+
+    @Test
+    void updateServerAccess_revokesRoleOfUnsharedUser() {
+        PlexUser hugo = synced(35867154, "Hugo", null);
+        hugo.setRole(Role.USER);
+        when(repository.findAll()).thenReturn(List.of(hugo));
+
+        service.updateServerAccess(Set.of(176554347L));
+
+        assertThat(hugo.hasServerAccess()).isFalse();
+        assertThat(hugo.getRole()).isEqualTo(Role.NONE);
+        verify(repository).save(hugo);
+        verify(auditLogService).log(eq(null), eq("ROLE_CHANGE"), eq("USER"), any(), anyMap());
+    }
+
+    @Test
+    void updateServerAccess_restoresAccessWithoutRestoringRole() {
+        PlexUser hugo = synced(35867154, "Hugo", null);
+        hugo.setServerAccess(false);
+        when(repository.findAll()).thenReturn(List.of(hugo));
+
+        service.updateServerAccess(Set.of(35867154L));
+
+        assertThat(hugo.hasServerAccess()).isTrue();
+        assertThat(hugo.getRole()).isEqualTo(Role.NONE);
+        verify(auditLogService, never()).log(any(), anyString(), anyString(), anyString(), anyMap());
+    }
+
+    @Test
+    void updateServerAccess_keepsOwnerAndUnchangedUsersUntouched() {
+        PlexUser owner = new PlexUser(1L, "owner", null, null, null, null);
+        PlexUser emilien = synced(176554347, "Emilien", null);
+        when(repository.findAll()).thenReturn(List.of(owner, emilien));
+
+        service.updateServerAccess(Set.of(176554347L));
+
+        assertThat(owner.hasServerAccess()).isTrue();
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void syncWithServer_leavesAccessUntouchedWhenPlexTvFails() {
+        when(plexClient.findOwnerToken()).thenReturn(Optional.of("token"));
+        when(plexClient.getMachineIdentifier()).thenReturn("machine");
+        when(plexTvClient.getSharedUserIds("token", "machine")).thenThrow(new IllegalStateException("down"));
+
+        assertThatThrownBy(service::syncWithServer).hasMessage("down");
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void syncWithServer_skipsBeforeFirstLogin() {
+        when(plexClient.findOwnerToken()).thenReturn(Optional.empty());
+
+        service.syncWithServer();
+
+        verify(plexClient, never()).getAccounts();
+    }
+
+    @Test
+    void setRole_rejectsUserWithoutServerAccess() {
+        PlexUser target = givenUser(TARGET_ID, false, Role.NONE);
+        target.setServerAccess(false);
+
+        assertThatThrownBy(() -> service.setRole(TARGET_ID, Role.USER, ACTOR_ID))
+                .isInstanceOf(IllegalStateException.class);
     }
 
     private static PlexUser synced(int plexAccountId, String name, String thumb) {

@@ -3,6 +3,7 @@ package com.removerr.job;
 import com.removerr.job.dto.JobStatusResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.http.HttpStatus;
@@ -31,15 +32,18 @@ public class JobRunner {
 
     private final List<Job<?>> jobs;
     private final TaskScheduler scheduler;
+    private final boolean startupRunsEnabled;
 
     private final Set<String> running = ConcurrentHashMap.newKeySet();
     private final Map<String, LastRun> lastRuns = new ConcurrentHashMap<>();
 
     private record LastRun(Instant at, boolean succeeded) {}
 
-    public JobRunner(List<Job<?>> jobs, TaskScheduler scheduler) {
+    public JobRunner(List<Job<?>> jobs, TaskScheduler scheduler,
+                     @Value("${removerr.jobs.run-at-startup:true}") boolean startupRunsEnabled) {
         this.jobs = jobs;
         this.scheduler = scheduler;
+        this.startupRunsEnabled = startupRunsEnabled;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -47,6 +51,9 @@ public class JobRunner {
         for (Job<?> job : jobs) {
             scheduler.schedule(() -> runScheduled(job), new CronTrigger(job.cron()));
             log.info("Job '{}' scheduled with cron '{}'", job.key(), job.cron());
+            if (startupRunsEnabled && job.runAtStartup()) {
+                runInBackground(job.key(), null);
+            }
         }
     }
 

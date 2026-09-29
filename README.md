@@ -31,7 +31,8 @@ shipped as a single Docker container.
 - **Shared access, allow-list based** — the first Plex login becomes the **owner**. Other accounts of
   the Plex server are synced with no access; the owner (or any admin) grants them `USER` (trash /
   restore) or `ADMIN` from the Users page. Roles are read from the database on every request, so
-  revoking access takes effect immediately.
+  revoking access takes effect immediately. An hourly job (also run at startup) checks the accepted
+  shares on plex.tv: an account removed from the Plex share is hidden and loses its role.
 
 ## Tech stack
 
@@ -144,7 +145,7 @@ POST   /api/admin/purge              # manual purge
 GET    /api/settings
 PUT    /api/settings
 POST   /api/settings/test            # same body as PUT, null fields fall back to saved values
-GET    /api/users
+GET    /api/users                    # accounts that still have access to the Plex server
 PATCH  /api/users/{id}               # { counted?, role? } — owner and own role are immutable
 GET    /api/audit
 GET    /api/jobs                     # scheduled jobs: running, next run, last run

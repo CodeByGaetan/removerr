@@ -20,7 +20,7 @@ public class PlexUserController {
 
     @GetMapping("/api/users")
     public List<PlexUserResponse> getUsers() {
-        return service.syncAndGetUsers();
+        return service.getUsers();
     }
 
     @PatchMapping("/api/users/{id}")
