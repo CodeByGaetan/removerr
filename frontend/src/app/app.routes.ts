@@ -39,21 +39,37 @@ export const routes: Routes = [
         canActivate: [adminGuard],
       },
       {
-        path: 'users',
-        loadComponent: () =>
-          import('./features/users/users.component').then(
-            (m) => m.UsersComponent
-          ),
-        canActivate: [adminGuard],
-      },
-      {
         path: 'settings',
         loadComponent: () =>
-          import('./features/settings/settings.component').then(
-            (m) => m.SettingsComponent
+          import('./features/settings/settings-layout.component').then(
+            (m) => m.SettingsLayoutComponent
           ),
         canActivate: [adminGuard],
-        canDeactivate: [unsavedChangesGuard],
+        children: [
+          { path: '', redirectTo: 'services', pathMatch: 'full' },
+          {
+            path: 'services',
+            loadComponent: () =>
+              import('./features/settings/services/services-settings.component').then(
+                (m) => m.ServicesSettingsComponent
+              ),
+            canDeactivate: [unsavedChangesGuard],
+          },
+          {
+            path: 'users',
+            loadComponent: () =>
+              import('./features/settings/users/users-settings.component').then(
+                (m) => m.UsersSettingsComponent
+              ),
+          },
+          {
+            path: 'jobs',
+            loadComponent: () =>
+              import('./features/settings/jobs/jobs-settings.component').then(
+                (m) => m.JobsSettingsComponent
+              ),
+          },
+        ],
       },
     ],
   },

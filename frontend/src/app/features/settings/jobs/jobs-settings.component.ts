@@ -4,11 +4,11 @@ import { messages } from '../../../core/messages';
 import { dayAndTime } from '../../../core/util/date.util';
 
 @Component({
-  selector: 'scheduled-jobs',
+  selector: 'app-jobs-settings',
   standalone: true,
-  templateUrl: './scheduled-jobs.component.html',
+  templateUrl: './jobs-settings.component.html',
 })
-export class ScheduledJobsComponent {
+export class JobsSettingsComponent {
   private jobsService = inject(JobsService);
 
   readonly jobs = this.jobsService.jobs;

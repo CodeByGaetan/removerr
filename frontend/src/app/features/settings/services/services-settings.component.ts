@@ -1,22 +1,21 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { forkJoin, timer } from 'rxjs';
-import { ConnectionTestResult, SaveSettingsRequest, SettingsService } from '../../core/api/settings.service';
-import { LeaveConfirmable } from '../../core/guards/unsaved-changes.guard';
-import { messages } from '../../core/messages';
-import { ToastService } from '../../core/services/toast.service';
-import { ConfirmModalComponent } from '../../shared/components/confirm-modal/confirm-modal.component';
-import { ScheduledJobsComponent } from './scheduled-jobs/scheduled-jobs.component';
+import { ConnectionTestResult, SaveSettingsRequest, SettingsService } from '../../../core/api/settings.service';
+import { LeaveConfirmable } from '../../../core/guards/unsaved-changes.guard';
+import { messages } from '../../../core/messages';
+import { ToastService } from '../../../core/services/toast.service';
+import { ConfirmModalComponent } from '../../../shared/components/confirm-modal/confirm-modal.component';
 
 @Component({
-  selector: 'app-settings',
+  selector: 'app-services-settings',
   standalone: true,
-  imports: [NgTemplateOutlet, ConfirmModalComponent, ScheduledJobsComponent],
-  templateUrl: './settings.component.html',
-  styleUrl: './settings.component.css',
+  imports: [NgTemplateOutlet, ConfirmModalComponent],
+  templateUrl: './services-settings.component.html',
+  styleUrl: './services-settings.component.css',
   host: { '(window:beforeunload)': 'onBeforeUnload($event)' },
 })
-export class SettingsComponent implements LeaveConfirmable {
+export class ServicesSettingsComponent implements LeaveConfirmable {
   private settingsService = inject(SettingsService);
   private toast = inject(ToastService);
 

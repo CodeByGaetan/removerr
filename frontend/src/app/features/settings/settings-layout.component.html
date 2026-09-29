@@ -1,0 +1,23 @@
+<div class="px-5 pt-5 md:px-12 md:pt-10 md:pb-12">
+  <div class="flex flex-col gap-3.5 mb-7 md:flex-row md:items-end md:justify-between">
+    <h1 class="text-[32px] md:text-5xl font-semibold m-0 tracking-tight">Paramètres</h1>
+
+    <!-- Tabs: each one saves its own way (form + Save for services, immediate elsewhere) -->
+    <nav aria-label="Sections des paramètres" class="glass flex w-full p-0.75 rounded-full md:w-auto">
+      @for (tab of tabs; track tab.path) {
+        <a
+          [routerLink]="tab.path"
+          routerLinkActive
+          #rla="routerLinkActive"
+          [attr.aria-current]="rla.isActive ? 'page' : null"
+          class="flex-1 px-4.5 py-2 rounded-full text-center text-[13px] font-medium no-underline select-none transition-[color,background-color,box-shadow] duration-[120ms] md:flex-none"
+          [class]="rla.isActive ? 'bg-white text-[#0a0612] shadow-[0_1px_6px_rgba(0,0,0,0.2)]' : 'text-white/75'"
+        >
+          {{ tab.label }}
+        </a>
+      }
+    </nav>
+  </div>
+
+  <router-outlet />
+</div>

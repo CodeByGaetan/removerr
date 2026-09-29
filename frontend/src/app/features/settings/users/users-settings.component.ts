@@ -1,12 +1,12 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { JobsService } from '../../core/api/jobs.service';
-import { PlexUser, Role, UserChanges, UsersService } from '../../core/api/users.service';
-import { AuthService } from '../../core/auth/auth.service';
-import { messages } from '../../core/messages';
-import { RelativeDatePipe } from '../../core/pipes/relative-date.pipe';
-import { ToastService } from '../../core/services/toast.service';
-import { ToggleSwitchComponent } from '../../shared/components/toggle-switch/toggle-switch.component';
-import { UserAvatarComponent } from '../../shared/components/user-avatar/user-avatar.component';
+import { JobsService } from '../../../core/api/jobs.service';
+import { PlexUser, Role, UserChanges, UsersService } from '../../../core/api/users.service';
+import { AuthService } from '../../../core/auth/auth.service';
+import { messages } from '../../../core/messages';
+import { RelativeDatePipe } from '../../../core/pipes/relative-date.pipe';
+import { ToastService } from '../../../core/services/toast.service';
+import { ToggleSwitchComponent } from '../../../shared/components/toggle-switch/toggle-switch.component';
+import { UserAvatarComponent } from '../../../shared/components/user-avatar/user-avatar.component';
 
 const ROLE_LABELS: Record<Role, string> = {
   NONE: 'Aucun',
@@ -15,12 +15,12 @@ const ROLE_LABELS: Record<Role, string> = {
 };
 
 @Component({
-  selector: 'app-users',
+  selector: 'app-users-settings',
   standalone: true,
   imports: [RelativeDatePipe, ToggleSwitchComponent, UserAvatarComponent],
-  templateUrl: './users.component.html',
+  templateUrl: './users-settings.component.html',
 })
-export class UsersComponent {
+export class UsersSettingsComponent {
   private usersService = inject(UsersService);
   private auth = inject(AuthService);
   private toast = inject(ToastService);

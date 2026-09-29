@@ -30,7 +30,7 @@ shipped as a single Docker container.
 - **Stateless auth** — Plex PIN login, then a JWT in an `HttpOnly`, `SameSite=Strict` cookie (30-day sliding session: renewed automatically past half its lifetime).
 - **Shared access, allow-list based** — the first Plex login becomes the **owner**. Other accounts of
   the Plex server are synced with no access; the owner (or any admin) grants them `USER` (trash /
-  restore) or `ADMIN` from the Users page. Roles are read from the database on every request, so
+  restore) or `ADMIN` from Settings › Users. Roles are read from the database on every request, so
   revoking access takes effect immediately. An hourly job (also run at startup) checks the accepted
   shares on plex.tv: an account removed from the Plex share is hidden and loses its role.
 
@@ -65,7 +65,7 @@ backend/  (Spring Boot, com.removerr)
 frontend/ (Angular)
 ├── core/      API services, auth, layout
 ├── shared/    reusable components
-├── features/  library, trash, users, settings, audit, login
+├── features/  library, trash, settings (services / users / jobs tabs), audit, login
 └── layout/    desktop sidebar + mobile bottom nav
 ```
 
