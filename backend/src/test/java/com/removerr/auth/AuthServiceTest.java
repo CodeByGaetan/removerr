@@ -18,7 +18,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -52,7 +51,7 @@ class AuthServiceTest {
             return persisted;
         });
         when(encryptor.encrypt(TOKEN)).thenReturn("encrypted");
-        when(plexUserService.findLoginCandidate(anyLong(), anyString(), anyString())).thenReturn(Optional.empty());
+        when(plexUserService.findLoginCandidate(anyLong())).thenReturn(Optional.empty());
     }
 
     @Test
@@ -70,8 +69,7 @@ class AuthServiceTest {
     void syncedAccountWithAccess_isLinkedWithoutKeepingItsToken() {
         PlexUser synced = syncedUser(Role.USER);
         when(repository.existsByOwnerTrue()).thenReturn(true);
-        when(plexUserService.findLoginCandidate(ACCOUNT.id(), ACCOUNT.username(), ACCOUNT.thumb()))
-                .thenReturn(Optional.of(synced));
+        when(plexUserService.findLoginCandidate(ACCOUNT.id())).thenReturn(Optional.of(synced));
 
         PlexUser user = login();
 
@@ -85,8 +83,7 @@ class AuthServiceTest {
     void syncedAccountWithoutAccess_isDeniedAndLeftUntouched() {
         PlexUser synced = syncedUser(Role.NONE);
         when(repository.existsByOwnerTrue()).thenReturn(true);
-        when(plexUserService.findLoginCandidate(ACCOUNT.id(), ACCOUNT.username(), ACCOUNT.thumb()))
-                .thenReturn(Optional.of(synced));
+        when(plexUserService.findLoginCandidate(ACCOUNT.id())).thenReturn(Optional.of(synced));
 
         assertThatThrownBy(() -> authService.pollPin(PIN_ID)).isInstanceOf(LoginDeniedException.class);
         assertThat(synced.getPlexTvId()).isNull();

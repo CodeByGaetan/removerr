@@ -14,5 +14,4 @@ public interface PlexUserRepository extends JpaRepository<PlexUser, Long> {
     long countByCountedTrueAndServerAccessTrue();
     boolean existsByOwnerTrue();
     Optional<PlexUser> findByOwnerTrue();
-    List<PlexUser> findByPlexTvIdIsNull();
 }

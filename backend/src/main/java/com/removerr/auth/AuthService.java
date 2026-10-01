@@ -85,7 +85,7 @@ public class AuthService {
     // Links the plex.tv identity to its synced server account, but only once access is
     // granted: a denied attempt must leave no trace on the row.
     private Optional<PlexUser> linkSyncedAccount(PlexUserAccount info) {
-        return plexUserService.findLoginCandidate(info.id(), info.username(), info.thumb())
+        return plexUserService.findLoginCandidate(info.id())
                 .filter(candidate -> candidate.getRole() != Role.NONE)
                 .map(candidate -> {
                     candidate.setPlexTvId(info.id());

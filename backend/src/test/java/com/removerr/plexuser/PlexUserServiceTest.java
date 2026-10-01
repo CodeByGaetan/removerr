@@ -73,30 +73,32 @@ class PlexUserServiceTest {
     }
 
     @Test
-    void findLoginCandidate_prefersLocalIdMatchingPlexTvId() {
-        PlexUser byId = synced(555, "someone-else", null);
-        PlexUser byName = synced(12, "marie", null);
-        when(repository.findByPlexTvIdIsNull()).thenReturn(List.of(byName, byId));
+    void findLoginCandidate_matchesLocalAccountIdEqualToPlexTvId() {
+        PlexUser marie = synced(555, "marie", null);
+        when(repository.findByPlexAccountId(555)).thenReturn(Optional.of(marie));
 
-        assertThat(service.findLoginCandidate(555, "marie", null)).contains(byId);
+        assertThat(service.findLoginCandidate(555)).contains(marie);
     }
 
     @Test
-    void findLoginCandidate_fallsBackToStrictThenCaseInsensitiveName() {
-        PlexUser caseInsensitive = synced(12, "MARIE", null);
-        PlexUser strict = synced(13, "marie", null);
-        when(repository.findByPlexTvIdIsNull()).thenReturn(List.of(caseInsensitive, strict));
+    void findLoginCandidate_neverMatchesOnNameAlone() {
+        // An outsider registering the plex.tv username "marie" gets a different id.
+        when(repository.findByPlexAccountId(999)).thenReturn(Optional.empty());
 
-        assertThat(service.findLoginCandidate(555, "marie", null)).contains(strict);
+        assertThat(service.findLoginCandidate(999)).isEmpty();
     }
 
     @Test
-    void findLoginCandidate_fallsBackToThumb() {
-        PlexUser byThumb = synced(12, "Marie (local)", "https://plex.tv/users/abc/avatar");
-        when(repository.findByPlexTvIdIsNull()).thenReturn(List.of(byThumb));
+    void findLoginCandidate_ignoresAlreadyLinkedOrUnsharedAccounts() {
+        PlexUser linked = synced(555, "marie", null);
+        linked.setPlexTvId(555);
+        PlexUser unshared = synced(556, "hugo", null);
+        unshared.setServerAccess(false);
+        when(repository.findByPlexAccountId(555)).thenReturn(Optional.of(linked));
+        when(repository.findByPlexAccountId(556)).thenReturn(Optional.of(unshared));
 
-        assertThat(service.findLoginCandidate(555, "marie", "https://plex.tv/users/abc/avatar")).contains(byThumb);
-        assertThat(service.findLoginCandidate(555, "marie", "https://plex.tv/users/other/avatar")).isEmpty();
+        assertThat(service.findLoginCandidate(555)).isEmpty();
+        assertThat(service.findLoginCandidate(556)).isEmpty();
     }
 
     @Test
