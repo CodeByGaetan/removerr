@@ -1,6 +1,8 @@
 package com.removerr.setting;
 
 import com.removerr.integration.plex.PlexLibraryClient;
+import com.removerr.job.JobRunner;
+import com.removerr.plexuser.UserSyncJob;
 import com.removerr.setting.dto.ConnectionTestResponse;
 import com.removerr.setting.dto.ConnectionTestResponse.ServiceStatus;
 import com.removerr.setting.dto.SettingsResponse;
@@ -13,6 +15,7 @@ import org.springframework.web.reactive.function.client.WebClientRequestExceptio
 import reactor.core.publisher.Mono;
 
 import java.time.Duration;
+import java.util.Objects;
 
 @RestController
 @RequestMapping("/api/settings")
@@ -20,10 +23,13 @@ public class AppSettingController {
 
     private final AppSettingService settingService;
     private final PlexLibraryClient plexLibraryClient;
+    private final JobRunner jobRunner;
 
-    public AppSettingController(AppSettingService settingService, PlexLibraryClient plexLibraryClient) {
+    public AppSettingController(AppSettingService settingService, PlexLibraryClient plexLibraryClient,
+                                JobRunner jobRunner) {
         this.settingService = settingService;
         this.plexLibraryClient = plexLibraryClient;
+        this.jobRunner = jobRunner;
     }
 
     @GetMapping
@@ -33,8 +39,22 @@ public class AppSettingController {
 
     @PutMapping
     public ResponseEntity<Void> updateSettings(@Valid @RequestBody UpdateSettingsRequest request) {
+        String previousPlexUrl = settingService.get(AppSettingKey.PLEX_SERVER_URL);
         settingService.updateSettings(request);
+        if (!Objects.equals(previousPlexUrl, settingService.get(AppSettingKey.PLEX_SERVER_URL))) {
+            syncUsersNow();
+        }
         return ResponseEntity.noContent().build();
+    }
+
+    // A new Plex server means new accounts and shares; on a fresh install it's also the first
+    // moment a sync can succeed. Waiting for the hourly run would leave the Users tab empty.
+    private void syncUsersNow() {
+        try {
+            jobRunner.runInBackground(UserSyncJob.KEY, null);
+        } catch (IllegalStateException alreadyRunning) {
+            // The running sync may predate the change, but the next hourly run will catch up.
+        }
     }
 
     /**

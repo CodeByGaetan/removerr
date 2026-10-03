@@ -6,6 +6,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class UserSyncJob implements Job<Void> {
 
+    public static final String KEY = "user-sync";
+
     private final PlexUserService plexUserService;
 
     public UserSyncJob(PlexUserService plexUserService) {
@@ -14,7 +16,7 @@ public class UserSyncJob implements Job<Void> {
 
     @Override
     public String key() {
-        return "user-sync";
+        return KEY;
     }
 
     @Override

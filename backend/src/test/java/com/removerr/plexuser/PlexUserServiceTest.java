@@ -2,6 +2,7 @@ package com.removerr.plexuser;
 
 import com.removerr.audit.AuditLogService;
 import com.removerr.auth.PlexAuthClient;
+import com.removerr.integration.IntegrationException;
 import com.removerr.integration.plex.PlexLibraryClient;
 import org.junit.jupiter.api.Test;
 
@@ -148,6 +149,16 @@ class PlexUserServiceTest {
 
         assertThatThrownBy(service::syncWithServer).hasMessage("down");
         verify(repository, never()).save(any());
+    }
+
+    @Test
+    void syncWithServer_leavesEverythingUntouchedWhenPlexServerIsUnreachable() {
+        when(plexClient.findOwnerToken()).thenReturn(Optional.of("token"));
+        when(plexClient.getAccounts()).thenThrow(new IntegrationException("Connection refused"));
+
+        assertThatThrownBy(service::syncWithServer).isInstanceOf(IntegrationException.class);
+        verify(repository, never()).save(any());
+        verify(plexTvClient, never()).getSharedUserIds(anyString(), anyString());
     }
 
     @Test
