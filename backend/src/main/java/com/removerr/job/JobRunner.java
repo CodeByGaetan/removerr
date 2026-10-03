@@ -59,9 +59,44 @@ public class JobRunner {
 
     /** Runs the job in the caller's thread and returns its result. */
     public <T> T runNow(Job<T> job, Long triggeredByUserId) {
-        if (!running.add(job.key())) {
-            throw new IllegalStateException("Job '" + job.key() + "' is already running");
+        claim(job.key());
+        return execute(job, triggeredByUserId);
+    }
+
+    /** Starts the job in the background; its progress is visible through {@link #statuses()}. */
+    public void runInBackground(String key, Long triggeredByUserId) {
+        Job<?> job = find(key);
+        // Claimed before scheduling: a double click or the cron tick can't slip in between,
+        // and the job already reads as running when the request returns.
+        claim(key);
+        try {
+            scheduler.schedule(() -> executeLogged(job, triggeredByUserId), Instant.now());
+        } catch (RuntimeException e) {
+            running.remove(key);
+            throw e;
         }
+    }
+
+    public List<JobStatusResponse> statuses() {
+        return jobs.stream().map(this::toStatus).toList();
+    }
+
+    private void runScheduled(Job<?> job) {
+        if (!running.add(job.key())) {
+            log.info("Job '{}' still running — scheduled run skipped", job.key());
+            return;
+        }
+        executeLogged(job, null);
+    }
+
+    private void claim(String key) {
+        if (!running.add(key)) {
+            throw new IllegalStateException("Job '" + key + "' is already running");
+        }
+    }
+
+    // Expects the job to be claimed; releases it when done.
+    private <T> T execute(Job<T> job, Long triggeredByUserId) {
         Instant start = Instant.now();
         try {
             T result = job.run(triggeredByUserId);
@@ -75,31 +110,10 @@ public class JobRunner {
         }
     }
 
-    /** Starts the job in the background; its progress is visible through {@link #statuses()}. */
-    public void runInBackground(String key, Long triggeredByUserId) {
-        Job<?> job = find(key);
-        if (running.contains(key)) {
-            throw new IllegalStateException("Job '" + key + "' is already running");
-        }
-        scheduler.schedule(() -> runLogged(job, triggeredByUserId), Instant.now());
-    }
-
-    public List<JobStatusResponse> statuses() {
-        return jobs.stream().map(this::toStatus).toList();
-    }
-
-    private void runScheduled(Job<?> job) {
-        if (running.contains(job.key())) {
-            log.info("Job '{}' still running — scheduled run skipped", job.key());
-            return;
-        }
-        runLogged(job, null);
-    }
-
     // Background runs have no caller to report to: failures end up in the logs and the status.
-    private void runLogged(Job<?> job, Long triggeredByUserId) {
+    private void executeLogged(Job<?> job, Long triggeredByUserId) {
         try {
-            runNow(job, triggeredByUserId);
+            execute(job, triggeredByUserId);
         } catch (RuntimeException e) {
             log.error("Job '{}' failed", job.key(), e);
         }

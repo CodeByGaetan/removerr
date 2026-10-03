@@ -15,6 +15,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class JobRunnerTest {
 
@@ -63,6 +64,28 @@ class JobRunnerTest {
         job.runner.runNow(job, null);
 
         assertThat(job.overlap).isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void runInBackground_marksRunningAtOnceAndRejectsSecondTrigger() {
+        Job<String> job = job(userId -> "x");
+        JobRunner runner = new JobRunner(List.of(job), scheduler, false);
+
+        runner.runInBackground("test", 1L);
+
+        assertThat(runner.statuses().getFirst().running()).isTrue();
+        assertThatThrownBy(() -> runner.runInBackground("test", 1L)).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> runner.runNow(job, 1L)).isInstanceOf(IllegalStateException.class);
+        verify(scheduler, times(1)).schedule(any(Runnable.class), any(Instant.class));
+    }
+
+    @Test
+    void runInBackground_releasesJobWhenSchedulingFails() {
+        JobRunner runner = new JobRunner(List.of(job(userId -> "x")), scheduler, false);
+        when(scheduler.schedule(any(Runnable.class), any(Instant.class))).thenThrow(new IllegalStateException("shut down"));
+
+        assertThatThrownBy(() -> runner.runInBackground("test", 1L)).hasMessage("shut down");
+        assertThat(runner.statuses().getFirst().running()).isFalse();
     }
 
     @Test
