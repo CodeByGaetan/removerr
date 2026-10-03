@@ -179,6 +179,25 @@ class PlexUserServiceTest {
                 .isInstanceOf(IllegalStateException.class);
     }
 
+    @Test
+    void getUsers_hidesAccessDetailsFromNonAdmins() {
+        PlexUser marie = spy(synced(555, "marie", null));
+        when(marie.getId()).thenReturn(7L);
+        marie.setRole(Role.ADMIN);
+        marie.setLastLoginAt("2026-10-12T10:00:00Z");
+        when(repository.findByServerAccessTrue()).thenReturn(List.of(marie));
+
+        var publicView = service.getUsers(false).getFirst();
+        var adminView = service.getUsers(true).getFirst();
+
+        assertThat(publicView.name()).isEqualTo("marie");
+        assertThat(publicView.role()).isNull();
+        assertThat(publicView.lastLoginAt()).isNull();
+        assertThat(publicView.plexAccountId()).isNull();
+        assertThat(adminView.role()).isEqualTo(Role.ADMIN);
+        assertThat(adminView.lastLoginAt()).isNotNull();
+    }
+
     private static PlexUser synced(int plexAccountId, String name, String thumb) {
         PlexUser user = new PlexUser(plexAccountId, name);
         user.setPlexThumb(thumb);

@@ -36,9 +36,14 @@ public class PlexUserService {
         this.auditLogService = auditLogService;
     }
 
-    /** Users whose account still has access to the Plex server. */
-    public List<PlexUserResponse> getUsers() {
-        return repository.findByServerAccessTrue().stream().map(this::toResponse).toList();
+    /**
+     * Users whose account still has access to the Plex server. Non-admins only need names
+     * for the "watched by" list: roles and login times are kept to admins.
+     */
+    public List<PlexUserResponse> getUsers(boolean withAccessDetails) {
+        return repository.findByServerAccessTrue().stream()
+                .map(u -> withAccessDetails ? toResponse(u) : toPublicResponse(u))
+                .toList();
     }
 
     /**
@@ -180,5 +185,9 @@ public class PlexUserService {
     private PlexUserResponse toResponse(PlexUser u) {
         return new PlexUserResponse(u.getId(), u.getPlexAccountId(), u.getName(),
                 u.isOwner(), u.getRole(), u.isCounted(), u.getLastLoginAt());
+    }
+
+    private PlexUserResponse toPublicResponse(PlexUser u) {
+        return new PlexUserResponse(u.getId(), null, u.getName(), u.isOwner(), null, u.isCounted(), null);
     }
 }

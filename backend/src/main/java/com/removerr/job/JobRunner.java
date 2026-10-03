@@ -129,6 +129,7 @@ public class JobRunner {
         ZonedDateTime next = CronExpression.parse(job.cron()).next(ZonedDateTime.now());
         return new JobStatusResponse(
                 job.key(),
+                job.cron(),
                 running.contains(job.key()),
                 next != null ? next.toInstant().toString() : null,
                 last != null ? last.at().toString() : null,

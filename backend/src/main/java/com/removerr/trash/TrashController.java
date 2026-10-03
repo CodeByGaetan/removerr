@@ -6,11 +6,11 @@ import com.removerr.trash.dto.TrashItemResponse;
 import com.removerr.trash.dto.TrashMovieRequest;
 import com.removerr.trash.dto.TrashSeasonRequest;
 import com.removerr.trash.dto.TrashShowRequest;
+import com.removerr.plexuser.Role;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -33,24 +33,27 @@ public class TrashController {
     @PostMapping("/api/trash/movies")
     @ResponseStatus(HttpStatus.CREATED)
     public TrashItemResponse trashMovie(@Valid @RequestBody TrashMovieRequest req,
-                                        @AuthenticationPrincipal Long userId) throws IOException {
-        rejectImmediateUnlessAdmin(req.immediate());
+                                        @AuthenticationPrincipal Long userId,
+                                        HttpServletRequest request) throws IOException {
+        rejectImmediateUnlessAdmin(req.immediate(), request);
         return trashService.trashMovie(req.radarrId(), req.immediate(), userId);
     }
 
     @PostMapping("/api/trash/shows")
     @ResponseStatus(HttpStatus.CREATED)
     public TrashItemResponse trashShow(@Valid @RequestBody TrashShowRequest req,
-                                       @AuthenticationPrincipal Long userId) throws IOException {
-        rejectImmediateUnlessAdmin(req.immediate());
+                                       @AuthenticationPrincipal Long userId,
+                                       HttpServletRequest request) throws IOException {
+        rejectImmediateUnlessAdmin(req.immediate(), request);
         return trashService.trashShow(req.sonarrId(), req.immediate(), userId);
     }
 
     @PostMapping("/api/trash/seasons")
     @ResponseStatus(HttpStatus.CREATED)
     public TrashItemResponse trashSeason(@Valid @RequestBody TrashSeasonRequest req,
-                                          @AuthenticationPrincipal Long userId) throws IOException {
-        rejectImmediateUnlessAdmin(req.immediate());
+                                          @AuthenticationPrincipal Long userId,
+                                          HttpServletRequest request) throws IOException {
+        rejectImmediateUnlessAdmin(req.immediate(), request);
         return trashService.trashSeason(req.sonarrId(), req.seasonNumber(), req.immediate(), userId);
     }
 
@@ -71,12 +74,8 @@ public class TrashController {
     }
 
     // Immediate deletion skips the retention delay, the only safety net left to other users.
-    private void rejectImmediateUnlessAdmin(boolean immediate) {
-        if (!immediate) return;
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        boolean admin = auth != null && auth.getAuthorities().stream()
-                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
-        if (!admin) {
+    private void rejectImmediateUnlessAdmin(boolean immediate, HttpServletRequest request) {
+        if (immediate && !request.isUserInRole(Role.ADMIN.name())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Immediate deletion is reserved to admins");
         }
     }

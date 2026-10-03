@@ -1,6 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { JobStatus, JobsService } from '../../../core/api/jobs.service';
 import { messages } from '../../../core/messages';
+import { describeSchedule } from '../../../core/util/cron.util';
 import { dayAndTime } from '../../../core/util/date.util';
 
 @Component({
@@ -23,12 +24,7 @@ export class JobsSettingsComponent {
   }
 
   schedule(job: JobStatus): string {
-    if (job.key === 'user-sync') return 'Toutes les heures';
-    // The purge hour comes from PURGE_HOUR on the server; the next run carries it.
-    const time = job.nextRunAt
-      ? new Date(job.nextRunAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-      : null;
-    return time ? `Tous les jours à ${time}` : 'Tous les jours';
+    return describeSchedule(job.cron, job.nextRunAt);
   }
 
   run(job: JobStatus) {

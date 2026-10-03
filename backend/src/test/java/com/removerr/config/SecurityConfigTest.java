@@ -14,6 +14,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -47,6 +48,20 @@ class SecurityConfigTest {
                         .content("{\"radarrId\": 1, \"immediate\": false}"))
                 .andExpect(status().isCreated());
         mvc.perform(post("/api/trash/1/restore")).andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(roles = "USER")
+    void user_getsUsersWithoutAccessDetails() throws Exception {
+        mvc.perform(get("/api/users")).andExpect(status().isOk());
+        verify(plexUserService).getUsers(false);
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void admin_getsUsersWithAccessDetails() throws Exception {
+        mvc.perform(get("/api/users")).andExpect(status().isOk());
+        verify(plexUserService).getUsers(true);
     }
 
     @Test

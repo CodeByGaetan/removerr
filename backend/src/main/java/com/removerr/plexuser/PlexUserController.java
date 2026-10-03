@@ -1,6 +1,7 @@
 package com.removerr.plexuser;
 
 import com.removerr.plexuser.dto.PlexUserResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import com.removerr.plexuser.dto.UpdateUserRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -19,8 +20,8 @@ public class PlexUserController {
     }
 
     @GetMapping("/api/users")
-    public List<PlexUserResponse> getUsers() {
-        return service.getUsers();
+    public List<PlexUserResponse> getUsers(HttpServletRequest request) {
+        return service.getUsers(request.isUserInRole(Role.ADMIN.name()));
     }
 
     @PatchMapping("/api/users/{id}")

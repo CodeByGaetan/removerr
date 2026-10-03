@@ -4,6 +4,7 @@ import { finalize, tap } from 'rxjs';
 
 export type Role = 'NONE' | 'USER' | 'ADMIN';
 
+// plexAccountId, role and lastLoginAt are only sent to admins (Settings › Users).
 export interface PlexUser {
   id: number;
   plexAccountId: number | null;

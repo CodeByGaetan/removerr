@@ -8,6 +8,7 @@ export type JobKey = 'purge' | 'user-sync';
 
 export interface JobStatus {
   key: JobKey;
+  cron: string;
   running: boolean;
   nextRunAt?: string;
   lastRunAt?: string;
