@@ -3,6 +3,7 @@ package com.removerr.auth;
 import com.removerr.auth.dto.PlexPin;
 import com.removerr.auth.dto.PlexSharedServer;
 import com.removerr.auth.dto.PlexUserAccount;
+import com.removerr.integration.IntegrationException;
 import com.removerr.setting.AppSettingKey;
 import com.removerr.setting.AppSettingService;
 import org.springframework.stereotype.Component;
@@ -92,11 +93,27 @@ public class PlexAuthClient {
         if (shares == null) {
             throw new IllegalStateException("Empty shared servers response from Plex");
         }
-        return shares.stream()
-                .filter(s -> machineIdentifier.equals(s.machineIdentifier()))
+        return sharedUserIdsFor(shares, machineIdentifier);
+    }
+
+    /**
+     * Active shares, as plex.tv ids, for the given server. Shares that exist but none for
+     * this server means its machine identifier changed (reinstall, migration): treating that
+     * as "nobody has access" would strip every user's role, so it fails instead.
+     */
+    static Set<Long> sharedUserIdsFor(List<PlexSharedServer> shares, String machineIdentifier) {
+        List<PlexSharedServer> active = shares.stream()
                 .filter(s -> s.deletedAt() == null && s.leftAt() == null)
+                .toList();
+        Set<Long> ids = active.stream()
+                .filter(s -> machineIdentifier.equals(s.machineIdentifier()))
                 .map(PlexSharedServer::invitedId)
                 .collect(Collectors.toSet());
+        if (ids.isEmpty() && !active.isEmpty()) {
+            throw new IntegrationException("plex.tv lists " + active.size()
+                    + " share(s), none for server " + machineIdentifier + " — did its identifier change?");
+        }
+        return ids;
     }
 
     public String buildAuthUrl(String code) {
