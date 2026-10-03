@@ -44,8 +44,10 @@ public class PlexUserService {
     /**
      * Imports the server's local accounts, then flags which ones still have an accepted
      * share. Any failure aborts before touching access flags: a Plex outage must not
-     * revoke everyone.
+     * revoke everyone. New accounts and access changes alter who counts toward views, so the
+     * cached library is evicted like in {@link #setCounted}.
      */
+    @CacheEvict(value = {"library", "library-shows"}, allEntries = true)
     public void syncWithServer() {
         Optional<String> ownerToken = plexClient.findOwnerToken();
         if (ownerToken.isEmpty()) {
