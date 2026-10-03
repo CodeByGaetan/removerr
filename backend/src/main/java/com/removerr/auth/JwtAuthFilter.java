@@ -40,6 +40,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         this.plexUserRepository = plexUserRepository;
     }
 
+    // Static assets are public and also carry the cookie: skip the DB lookup for them.
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        return !request.getRequestURI().startsWith("/api/");
+    }
+
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,

@@ -20,6 +20,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class JwtAuthFilterTest {
@@ -77,6 +78,17 @@ class JwtAuthFilterTest {
 
         runFilter();
 
+        assertThat(authentication()).isNull();
+    }
+
+    @Test
+    void skipsDatabaseLookupOutsideApi() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/main-ABC123.js");
+        request.setCookies(new Cookie(AuthCookieFactory.COOKIE_NAME, TOKEN));
+
+        filter.doFilter(request, response, new MockFilterChain());
+
+        verifyNoInteractions(repository);
         assertThat(authentication()).isNull();
     }
 

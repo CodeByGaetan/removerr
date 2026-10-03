@@ -8,7 +8,8 @@ import com.removerr.plexuser.PlexUserService;
 import com.removerr.plexuser.Role;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
@@ -22,14 +23,17 @@ public class AuthService {
     private final AesGcmEncryptor encryptor;
     private final JwtService jwtService;
     private final PlexUserService plexUserService;
+    private final TransactionTemplate txTemplate;
 
     public AuthService(PlexAuthClient plexClient, PlexUserRepository plexUserRepository,
-                       AesGcmEncryptor encryptor, JwtService jwtService, PlexUserService plexUserService) {
+                       AesGcmEncryptor encryptor, JwtService jwtService, PlexUserService plexUserService,
+                       PlatformTransactionManager txManager) {
         this.plexClient = plexClient;
         this.plexUserRepository = plexUserRepository;
         this.encryptor = encryptor;
         this.jwtService = jwtService;
         this.plexUserService = plexUserService;
+        this.txTemplate = new TransactionTemplate(txManager);
     }
 
     public CreatePinResponse createPin() {
@@ -37,7 +41,8 @@ public class AuthService {
         return new CreatePinResponse(pin.id(), pin.code(), plexClient.buildAuthUrl(pin.code()));
     }
 
-    @Transactional
+    // Not @Transactional: polled every 2s during login, and a transaction would hold the single
+    // SQLite connection across the plex.tv calls. Only the DB part runs in one.
     public PollResult pollPin(long pinId) {
         PlexPin pin = plexClient.checkPin(pinId);
 
@@ -45,10 +50,12 @@ public class AuthService {
         if (pin.authToken() == null) return PollResult.pending();
 
         PlexUserAccount info = plexClient.getUserInfo(pin.authToken());
-        PlexUser user = resolveUser(info, pin.authToken());
-        String jwt = jwtService.generateToken(user);
-        int countedTotal = (int) plexUserRepository.countByCountedTrueAndServerAccessTrue();
-        return PollResult.success(toMeResponse(user, countedTotal), jwt);
+        return txTemplate.execute(status -> {
+            PlexUser user = resolveUser(info, pin.authToken());
+            String jwt = jwtService.generateToken(user);
+            int countedTotal = (int) plexUserRepository.countByCountedTrueAndServerAccessTrue();
+            return PollResult.success(toMeResponse(user, countedTotal), jwt);
+        });
     }
 
     public MeResponse getMe(Long userId) {

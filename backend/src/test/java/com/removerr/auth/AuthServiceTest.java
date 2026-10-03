@@ -11,6 +11,7 @@ import com.removerr.plexuser.Role;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.transaction.PlatformTransactionManager;
 
 import java.util.Optional;
 
@@ -37,7 +38,8 @@ class AuthServiceTest {
     private final JwtService jwtService = mock(JwtService.class);
     private final PlexUserService plexUserService = mock(PlexUserService.class);
     private final AuthService authService =
-            new AuthService(plexClient, repository, encryptor, jwtService, plexUserService);
+            new AuthService(plexClient, repository, encryptor, jwtService, plexUserService,
+                    mock(PlatformTransactionManager.class));
 
     @BeforeEach
     void setUp() {
