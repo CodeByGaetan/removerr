@@ -6,6 +6,7 @@ import com.removerr.plexuser.PlexUser;
 import com.removerr.plexuser.PlexUserRepository;
 import com.removerr.plexuser.PlexUserService;
 import com.removerr.plexuser.Role;
+import com.removerr.plexuser.ServerAccess;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -53,13 +54,13 @@ public class AuthService {
         return txTemplate.execute(status -> {
             PlexUser user = resolveUser(info, pin.authToken());
             String jwt = jwtService.generateToken(user);
-            int countedTotal = (int) plexUserRepository.countByCountedTrueAndServerAccessTrue();
+            int countedTotal = (int) plexUserRepository.countByCountedTrueAndServerAccessNot(ServerAccess.NONE);
             return PollResult.success(toMeResponse(user, countedTotal), jwt);
         });
     }
 
     public MeResponse getMe(Long userId) {
-        int countedTotal = (int) plexUserRepository.countByCountedTrueAndServerAccessTrue();
+        int countedTotal = (int) plexUserRepository.countByCountedTrueAndServerAccessNot(ServerAccess.NONE);
         return plexUserRepository.findById(userId)
                 .map(user -> toMeResponse(user, countedTotal))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));

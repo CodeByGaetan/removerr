@@ -35,9 +35,9 @@ public class PlexUser {
     @Column(nullable = false)
     private boolean counted = true;
 
-    /** Whether the account still has an accepted share on the Plex server (owner: always). */
-    @Column(name = "has_server_access", nullable = false)
-    private boolean serverAccess = true;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "server_access", nullable = false, length = 10)
+    private ServerAccess serverAccess = ServerAccess.NONE;
 
     @Column(name = "plex_token_encrypted", columnDefinition = "TEXT")
     private String plexTokenEncrypted;
@@ -73,6 +73,7 @@ public class PlexUser {
         this.counted = true;
         this.owner = true;
         this.role = Role.ADMIN;
+        this.serverAccess = ServerAccess.OWNER;
     }
 
     public Long getId() { return id; }
@@ -84,7 +85,7 @@ public class PlexUser {
     public Role getRole() { return role; }
     public boolean isAdmin() { return role == Role.ADMIN; }
     public boolean isCounted() { return counted; }
-    public boolean hasServerAccess() { return serverAccess; }
+    public ServerAccess getServerAccess() { return serverAccess; }
     public String getPlexTokenEncrypted() { return plexTokenEncrypted; }
     public String getCreatedAt() { return createdAt; }
     public String getLastLoginAt() { return lastLoginAt; }
@@ -96,7 +97,7 @@ public class PlexUser {
     public void setEmail(String email) { this.email = email; }
     public void setRole(Role role) { this.role = role; }
     public void setCounted(boolean counted) { this.counted = counted; }
-    public void setServerAccess(boolean serverAccess) { this.serverAccess = serverAccess; }
+    public void setServerAccess(ServerAccess serverAccess) { this.serverAccess = serverAccess; }
     public void setPlexTokenEncrypted(String plexTokenEncrypted) { this.plexTokenEncrypted = plexTokenEncrypted; }
     public void setLastLoginAt(String lastLoginAt) { this.lastLoginAt = lastLoginAt; }
     public void setPlexThumb(String plexThumb) { this.plexThumb = plexThumb; }

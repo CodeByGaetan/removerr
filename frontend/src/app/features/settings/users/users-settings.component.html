@@ -24,7 +24,7 @@
     </button>
   </div>
   <p class="mt-3 mb-0 max-w-[640px] text-[13px] leading-normal text-white/55">
-    Les comptes partagés sur votre serveur Plex n'ont pas accès à Removerr par défaut. Un
+    Vos amis Plex et les membres de votre foyer n'ont pas accès à Removerr par défaut. Un
     utilisateur peut mettre à la corbeille et restaurer ; un admin gère aussi les paramètres, la
     purge et les accès. La liste se synchronise toutes les heures.
   </p>
@@ -55,6 +55,22 @@
                   class="text-[9px] font-mono tracking-[0.8px] uppercase px-1.75 py-0.5 rounded-sm font-semibold bg-accent/15 text-accent border border-accent/25"
                 >
                   Propriétaire
+                </span>
+              }
+              @if (user.serverAccess === 'HOME' || user.serverAccess === 'MANAGED') {
+                <span
+                  class="text-[9px] font-mono tracking-[0.8px] uppercase px-1.75 py-0.5 rounded-sm font-semibold bg-state-info/15 text-state-info border border-state-info/25"
+                  title="Membre de votre foyer Plex Home"
+                >
+                  Foyer
+                </span>
+              }
+              @if (user.serverAccess === 'MANAGED') {
+                <span
+                  class="text-[9px] font-mono tracking-[0.8px] uppercase px-1.75 py-0.5 rounded-sm font-semibold bg-white/8 text-white/60 border border-white/12"
+                  title="Utilisateur géré : pas de compte plex.tv, ne peut pas se connecter"
+                >
+                  Géré
                 </span>
               }
               @if (isCurrentUser(user)) {
@@ -99,7 +115,9 @@
               }
             </div>
           } @else {
-            <span class="text-[12px] font-mono text-white/45 md:px-3.5">{{ roleLabel(user.role) }}</span>
+            <span class="text-[12px] font-mono text-white/45 md:px-3.5">
+              {{ user.serverAccess === 'MANAGED' ? 'Connexion impossible' : roleLabel(user.role) }}
+            </span>
           }
 
           <div class="flex items-center justify-between gap-2.5">

@@ -1,5 +1,7 @@
 package com.removerr.auth;
 
+import com.removerr.auth.dto.PlexHomeUser;
+import com.removerr.auth.dto.PlexHomeUsersResponse;
 import com.removerr.auth.dto.PlexPin;
 import com.removerr.auth.dto.PlexSharedServer;
 import com.removerr.auth.dto.PlexUserAccount;
@@ -114,6 +116,24 @@ public class PlexAuthClient {
                     + " share(s), none for server " + machineIdentifier + " — did its identifier change?");
         }
         return ids;
+    }
+
+    /**
+     * Members of the owner's Plex Home: they reach the server through the Home, not through a
+     * share, so they never appear in shared_servers. The owner is listed too.
+     */
+    public List<PlexHomeUser> getHomeUsers(String ownerToken) {
+        PlexHomeUsersResponse response = plexClient.get()
+                .uri("/api/v2/home/users")
+                .header("X-Plex-Token", ownerToken)
+                .header("X-Plex-Client-Identifier", getOrCreateClientId())
+                .retrieve()
+                .bodyToMono(PlexHomeUsersResponse.class)
+                .block();
+        if (response == null || response.users() == null) {
+            throw new IllegalStateException("Empty Plex Home response from Plex");
+        }
+        return response.users();
     }
 
     public String buildAuthUrl(String code) {

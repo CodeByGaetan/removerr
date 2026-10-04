@@ -1,5 +1,9 @@
 package com.removerr.auth;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.removerr.auth.dto.PlexHomeUser;
+import com.removerr.auth.dto.PlexHomeUsersResponse;
 import com.removerr.auth.dto.PlexSharedServer;
 import com.removerr.integration.IntegrationException;
 import org.junit.jupiter.api.Test;
@@ -35,5 +39,22 @@ class PlexAuthClientTest {
 
         assertThatThrownBy(() -> PlexAuthClient.sharedUserIdsFor(shares, SERVER))
                 .isInstanceOf(IntegrationException.class);
+    }
+
+    @Test
+    void homeUsersResponse_readsIdAndRestrictedFromObservedFormat() throws Exception {
+        // Shape returned by plex.tv/api/v2/home/users on a real account (personal fields removed).
+        String json = """
+                {"subscription": true, "users": [
+                  {"id": 76217485, "uuid": "x", "title": "x", "username": "x", "hasPassword": true,
+                   "restricted": false, "admin": false, "guest": false, "protected": true},
+                  {"id": 99, "uuid": "y", "title": "Kid", "restricted": true}
+                ]}""";
+
+        PlexHomeUsersResponse response = new ObjectMapper()
+                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+                .readValue(json, PlexHomeUsersResponse.class);
+
+        assertThat(response.users()).containsExactly(new PlexHomeUser(76217485L, false), new PlexHomeUser(99L, true));
     }
 }

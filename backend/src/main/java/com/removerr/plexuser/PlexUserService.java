@@ -2,6 +2,7 @@ package com.removerr.plexuser;
 
 import com.removerr.audit.AuditLogService;
 import com.removerr.auth.PlexAuthClient;
+import com.removerr.auth.dto.PlexHomeUser;
 import com.removerr.integration.ServiceNotConfiguredException;
 import com.removerr.integration.plex.PlexLibraryClient;
 import com.removerr.integration.plex.dto.PlexAccountEntry;
@@ -14,7 +15,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -41,15 +44,15 @@ public class PlexUserService {
      * for the "watched by" list: roles and login times are kept to admins.
      */
     public List<PlexUserResponse> getUsers(boolean withAccessDetails) {
-        return repository.findByServerAccessTrue().stream()
+        return repository.findByServerAccessNot(ServerAccess.NONE).stream()
                 .map(u -> withAccessDetails ? toResponse(u) : toPublicResponse(u))
                 .toList();
     }
 
     /**
-     * Imports the server's local accounts, then flags which ones still have an accepted
-     * share. Any failure aborts before touching access flags: a Plex outage must not
-     * revoke everyone. New accounts and access changes alter who counts toward views, so the
+     * Imports the server's local accounts, then records how each one reaches the server:
+     * friend share or Plex Home membership. Any failure aborts before touching access: a Plex
+     * outage must not revoke everyone. New accounts and access changes alter who counts toward views, so the
      * cached library is evicted like in {@link #setCounted}.
      */
     @CacheEvict(value = {"library", "library-shows"}, allEntries = true)
@@ -60,44 +63,76 @@ public class PlexUserService {
             return;
         }
         List<PlexAccountEntry> accounts;
-        Set<Long> sharedUserIds;
+        Map<Long, ServerAccess> grants;
         try {
             accounts = plexClient.getAccounts();
-            sharedUserIds = plexTvClient.getSharedUserIds(ownerToken.get(), plexClient.getMachineIdentifier());
+            grants = accessGrants(
+                    plexTvClient.getSharedUserIds(ownerToken.get(), plexClient.getMachineIdentifier()),
+                    plexTvClient.getHomeUsers(ownerToken.get()));
         } catch (ServiceNotConfiguredException e) {
             log.info("Plex not configured — skipping user sync");
             return;
         }
         upsertAccounts(accounts);
         warnIfOwnerUnlinked();
-        updateServerAccess(sharedUserIds);
+        updateServerAccess(grants);
+    }
+
+    /** plex.tv id → access. Home wins over a share: a member reaches the server either way. */
+    static Map<Long, ServerAccess> accessGrants(Set<Long> sharedUserIds, List<PlexHomeUser> homeUsers) {
+        Map<Long, ServerAccess> grants = new HashMap<>();
+        sharedUserIds.forEach(id -> grants.put(id, ServerAccess.SHARED));
+        homeUsers.forEach(u -> grants.put(u.id(), u.restricted() ? ServerAccess.MANAGED : ServerAccess.HOME));
+        return grants;
     }
 
     // Not @Transactional: see setRole.
-    void updateServerAccess(Set<Long> sharedUserIds) {
-        for (PlexUser user : repository.findAll()) {
-            boolean access = user.isOwner() || isShared(user, sharedUserIds);
-            if (access == user.hasServerAccess()) continue;
+    void updateServerAccess(Map<Long, ServerAccess> grants) {
+        List<PlexUser> users = repository.findAll();
+        for (PlexUser user : users) {
+            ServerAccess access = user.isOwner() ? ServerAccess.OWNER : grantFor(user, grants);
+            ServerAccess previousAccess = user.getServerAccess();
+            if (access == previousAccess) continue;
 
             user.setServerAccess(access);
-            Role previous = user.getRole();
-            boolean revoked = !access && previous != Role.NONE;
+            Role previousRole = user.getRole();
+            boolean revoked = !access.canSignIn() && previousRole != Role.NONE;
             if (revoked) user.setRole(Role.NONE);
             repository.save(user);
 
-            log.info("User '{}' {} the Plex server", user.getName(), access ? "regained access to" : "lost access to");
+            log.info("User '{}' server access: {} -> {}", user.getName(), previousAccess, access);
             if (revoked) {
                 auditLogService.log(null, "ROLE_CHANGE", "USER", String.valueOf(user.getId()),
-                        AuditLogService.meta("title", user.getName(), "from", previous, "to", Role.NONE));
+                        AuditLogService.meta("title", user.getName(), "from", previousRole, "to", Role.NONE));
             }
         }
+        logUnmatchedHomeMembers(users, grants);
     }
 
     // A shared user's local account id equals their plex.tv id (checked on a real server),
     // and logged-in users also carry their plex.tv id.
-    private static boolean isShared(PlexUser user, Set<Long> sharedUserIds) {
-        return (user.getPlexAccountId() != null && sharedUserIds.contains(user.getPlexAccountId().longValue()))
-                || (user.getPlexTvId() != null && sharedUserIds.contains(user.getPlexTvId()));
+    private static ServerAccess grantFor(PlexUser user, Map<Long, ServerAccess> grants) {
+        if (user.getPlexAccountId() != null && grants.containsKey(user.getPlexAccountId().longValue())) {
+            return grants.get(user.getPlexAccountId().longValue());
+        }
+        if (user.getPlexTvId() != null && grants.containsKey(user.getPlexTvId())) {
+            return grants.get(user.getPlexTvId());
+        }
+        return ServerAccess.NONE;
+    }
+
+    // Home members are assumed to follow the same id rule as friends, which couldn't be checked
+    // on a real Plex Home: make a mismatch visible instead of silently hiding the member.
+    private static void logUnmatchedHomeMembers(List<PlexUser> users, Map<Long, ServerAccess> grants) {
+        grants.forEach((plexTvId, access) -> {
+            if (access != ServerAccess.HOME && access != ServerAccess.MANAGED) return;
+            boolean matched = users.stream().anyMatch(u ->
+                    (u.getPlexAccountId() != null && u.getPlexAccountId().longValue() == plexTvId)
+                            || plexTvId.equals(u.getPlexTvId()));
+            if (!matched) {
+                log.info("Plex Home member (plexTvId={}) matches no account of the Plex server", plexTvId);
+            }
+        });
     }
 
     void upsertAccounts(List<PlexAccountEntry> accounts) {
@@ -139,7 +174,7 @@ public class PlexUserService {
     public Optional<PlexUser> findLoginCandidate(long plexTvId) {
         if (plexTvId > Integer.MAX_VALUE) return Optional.empty();
         return repository.findByPlexAccountId((int) plexTvId)
-                .filter(u -> u.getPlexTvId() == null && u.hasServerAccess());
+                .filter(u -> u.getPlexTvId() == null && u.getServerAccess().canSignIn());
     }
 
     private void warnIfOwnerUnlinked() {
@@ -169,8 +204,8 @@ public class PlexUserService {
         if (user.getId() == actorId) {
             throw new IllegalStateException("You cannot change your own role");
         }
-        if (!user.hasServerAccess()) {
-            throw new IllegalStateException("This account no longer has access to the Plex server");
+        if (!user.getServerAccess().canSignIn()) {
+            throw new IllegalStateException("This account cannot sign in to Removerr");
         }
         Role previous = user.getRole();
         if (previous == role) return toResponse(user);
@@ -184,10 +219,10 @@ public class PlexUserService {
 
     private PlexUserResponse toResponse(PlexUser u) {
         return new PlexUserResponse(u.getId(), u.getPlexAccountId(), u.getName(),
-                u.isOwner(), u.getRole(), u.isCounted(), u.getLastLoginAt());
+                u.isOwner(), u.getServerAccess(), u.getRole(), u.isCounted(), u.getLastLoginAt());
     }
 
     private PlexUserResponse toPublicResponse(PlexUser u) {
-        return new PlexUserResponse(u.getId(), null, u.getName(), u.isOwner(), null, u.isCounted(), null);
+        return new PlexUserResponse(u.getId(), null, u.getName(), u.isOwner(), null, null, u.isCounted(), null);
     }
 }

@@ -16,13 +16,15 @@
         <!-- NONE = no access to Removerr, USER = trash/restore, ADMIN = everything -->
         <sql>ALTER TABLE plex_user ADD COLUMN role VARCHAR(10) NOT NULL DEFAULT 'NONE'</sql>
 
-        <!-- Whether the account currently has an accepted share on the Plex server (owner:
-             always). Kept in sync by the user-sync job; defaults to 1 so existing rows stay
-             visible until the first sync corrects them. -->
-        <sql>ALTER TABLE plex_user ADD COLUMN has_server_access INTEGER NOT NULL DEFAULT 1</sql>
+        <!-- How the account reaches the Plex server: OWNER, SHARED (friend share), HOME (Plex
+             Home member), MANAGED (Plex Home managed user, cannot sign in) or NONE. Kept in sync
+             by the user-sync job; SHARED by default so existing rows stay visible until the
+             first sync corrects them. -->
+        <sql>ALTER TABLE plex_user ADD COLUMN server_access VARCHAR(10) NOT NULL DEFAULT 'SHARED'</sql>
 
         <update tableName="plex_user">
             <column name="role" value="ADMIN"/>
+            <column name="server_access" value="OWNER"/>
             <where>is_owner = 1</where>
         </update>
 

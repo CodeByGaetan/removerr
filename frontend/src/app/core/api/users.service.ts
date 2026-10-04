@@ -3,13 +3,15 @@ import { HttpClient } from '@angular/common/http';
 import { finalize, tap } from 'rxjs';
 
 export type Role = 'NONE' | 'USER' | 'ADMIN';
+export type ServerAccess = 'OWNER' | 'SHARED' | 'HOME' | 'MANAGED';
 
-// plexAccountId, role and lastLoginAt are only sent to admins (Settings › Users).
+// plexAccountId, serverAccess, role and lastLoginAt are only sent to admins (Settings › Users).
 export interface PlexUser {
   id: number;
   plexAccountId: number | null;
   name: string;
   owner: boolean;
+  serverAccess: ServerAccess;
   role: Role;
   counted: boolean;
   lastLoginAt: string | null;

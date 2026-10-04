@@ -32,7 +32,10 @@ shipped as a single Docker container.
   the Plex server are synced with no access; the owner (or any admin) grants them `USER` (trash /
   restore) or `ADMIN` from Settings › Users. Roles are read from the database on every request, so
   revoking access takes effect immediately. An hourly job (also run at startup) checks the accepted
-  shares on plex.tv: an account removed from the Plex share is hidden and loses its role.
+  shares and the Plex Home members on plex.tv: an account that no longer reaches the server is
+  hidden and loses its role. Plex Home managed users stay counted for views but can never sign in
+  (they have no plex.tv credentials). Plex Home support follows the plex.tv API but hasn't been
+  verified against a real Home yet — unmatched members are logged by the sync.
 
 ## Tech stack
 

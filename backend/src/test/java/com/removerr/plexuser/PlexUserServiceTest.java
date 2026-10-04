@@ -2,11 +2,13 @@ package com.removerr.plexuser;
 
 import com.removerr.audit.AuditLogService;
 import com.removerr.auth.PlexAuthClient;
+import com.removerr.auth.dto.PlexHomeUser;
 import com.removerr.integration.IntegrationException;
 import com.removerr.integration.plex.PlexLibraryClient;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -94,7 +96,7 @@ class PlexUserServiceTest {
         PlexUser linked = synced(555, "marie", null);
         linked.setPlexTvId(555);
         PlexUser unshared = synced(556, "hugo", null);
-        unshared.setServerAccess(false);
+        unshared.setServerAccess(ServerAccess.NONE);
         when(repository.findByPlexAccountId(555)).thenReturn(Optional.of(linked));
         when(repository.findByPlexAccountId(556)).thenReturn(Optional.of(unshared));
 
@@ -108,9 +110,9 @@ class PlexUserServiceTest {
         hugo.setRole(Role.USER);
         when(repository.findAll()).thenReturn(List.of(hugo));
 
-        service.updateServerAccess(Set.of(176554347L));
+        service.updateServerAccess(Map.of(176554347L, ServerAccess.SHARED));
 
-        assertThat(hugo.hasServerAccess()).isFalse();
+        assertThat(hugo.getServerAccess()).isEqualTo(ServerAccess.NONE);
         assertThat(hugo.getRole()).isEqualTo(Role.NONE);
         verify(repository).save(hugo);
         verify(auditLogService).log(eq(null), eq("ROLE_CHANGE"), eq("USER"), any(), anyMap());
@@ -119,14 +121,58 @@ class PlexUserServiceTest {
     @Test
     void updateServerAccess_restoresAccessWithoutRestoringRole() {
         PlexUser hugo = synced(35867154, "Hugo", null);
-        hugo.setServerAccess(false);
+        hugo.setServerAccess(ServerAccess.NONE);
         when(repository.findAll()).thenReturn(List.of(hugo));
 
-        service.updateServerAccess(Set.of(35867154L));
+        service.updateServerAccess(Map.of(35867154L, ServerAccess.SHARED));
 
-        assertThat(hugo.hasServerAccess()).isTrue();
+        assertThat(hugo.getServerAccess()).isEqualTo(ServerAccess.SHARED);
         assertThat(hugo.getRole()).isEqualTo(Role.NONE);
         verify(auditLogService, never()).log(any(), anyString(), anyString(), anyString(), anyMap());
+    }
+
+    @Test
+    void accessGrants_homeWinsOverShareAndFlagsManagedUsers() {
+        Map<Long, ServerAccess> grants = PlexUserService.accessGrants(
+                Set.of(1L, 2L),
+                List.of(new PlexHomeUser(2L, false), new PlexHomeUser(3L, true)));
+
+        assertThat(grants).containsExactlyInAnyOrderEntriesOf(Map.of(
+                1L, ServerAccess.SHARED, 2L, ServerAccess.HOME, 3L, ServerAccess.MANAGED));
+    }
+
+    @Test
+    void updateServerAccess_revokesRoleOfUserBecomingManaged() {
+        PlexUser kid = synced(42, "Kid", null);
+        kid.setRole(Role.USER);
+        when(repository.findAll()).thenReturn(List.of(kid));
+
+        service.updateServerAccess(Map.of(42L, ServerAccess.MANAGED));
+
+        assertThat(kid.getServerAccess()).isEqualTo(ServerAccess.MANAGED);
+        assertThat(kid.getRole()).isEqualTo(Role.NONE);
+    }
+
+    @Test
+    void updateServerAccess_keepsRoleOfUserMovingFromShareToHome() {
+        PlexUser partner = synced(43, "Partner", null);
+        partner.setRole(Role.ADMIN);
+        when(repository.findAll()).thenReturn(List.of(partner));
+
+        service.updateServerAccess(Map.of(43L, ServerAccess.HOME));
+
+        assertThat(partner.getServerAccess()).isEqualTo(ServerAccess.HOME);
+        assertThat(partner.getRole()).isEqualTo(Role.ADMIN);
+        verify(auditLogService, never()).log(any(), anyString(), anyString(), anyString(), anyMap());
+    }
+
+    @Test
+    void setRole_rejectsManagedUser() {
+        PlexUser target = givenUser(TARGET_ID, false, Role.NONE);
+        target.setServerAccess(ServerAccess.MANAGED);
+
+        assertThatThrownBy(() -> service.setRole(TARGET_ID, Role.USER, ACTOR_ID))
+                .isInstanceOf(IllegalStateException.class);
     }
 
     @Test
@@ -135,9 +181,9 @@ class PlexUserServiceTest {
         PlexUser emilien = synced(176554347, "Emilien", null);
         when(repository.findAll()).thenReturn(List.of(owner, emilien));
 
-        service.updateServerAccess(Set.of(176554347L));
+        service.updateServerAccess(Map.of(176554347L, ServerAccess.SHARED));
 
-        assertThat(owner.hasServerAccess()).isTrue();
+        assertThat(owner.getServerAccess()).isEqualTo(ServerAccess.OWNER);
         verify(repository, never()).save(any());
     }
 
@@ -173,7 +219,7 @@ class PlexUserServiceTest {
     @Test
     void setRole_rejectsUserWithoutServerAccess() {
         PlexUser target = givenUser(TARGET_ID, false, Role.NONE);
-        target.setServerAccess(false);
+        target.setServerAccess(ServerAccess.NONE);
 
         assertThatThrownBy(() -> service.setRole(TARGET_ID, Role.USER, ACTOR_ID))
                 .isInstanceOf(IllegalStateException.class);
@@ -185,7 +231,7 @@ class PlexUserServiceTest {
         when(marie.getId()).thenReturn(7L);
         marie.setRole(Role.ADMIN);
         marie.setLastLoginAt("2026-10-12T10:00:00Z");
-        when(repository.findByServerAccessTrue()).thenReturn(List.of(marie));
+        when(repository.findByServerAccessNot(ServerAccess.NONE)).thenReturn(List.of(marie));
 
         var publicView = service.getUsers(false).getFirst();
         var adminView = service.getUsers(true).getFirst();
@@ -200,6 +246,7 @@ class PlexUserServiceTest {
 
     private static PlexUser synced(int plexAccountId, String name, String thumb) {
         PlexUser user = new PlexUser(plexAccountId, name);
+        user.setServerAccess(ServerAccess.SHARED);
         user.setPlexThumb(thumb);
         return user;
     }
@@ -210,6 +257,7 @@ class PlexUserServiceTest {
                 : new PlexUser((int) id, "someone"));
         when(user.getId()).thenReturn(id);
         user.setRole(role);
+        if (!owner) user.setServerAccess(ServerAccess.SHARED);
         when(repository.findById(id)).thenReturn(Optional.of(user));
         when(repository.save(user)).thenReturn(user);
         return user;

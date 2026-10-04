@@ -62,9 +62,10 @@ export class UsersSettingsComponent {
     return user.id === this.auth.me()?.id;
   }
 
-  // Mirrors the backend rules: the owner's role and your own role are immutable.
+  // Mirrors the backend rules: the owner's role and your own role are immutable, and a
+  // managed user has no plex.tv credentials to sign in with.
   canEditRole(user: PlexUser): boolean {
-    return !user.owner && !this.isCurrentUser(user);
+    return !user.owner && !this.isCurrentUser(user) && user.serverAccess !== 'MANAGED';
   }
 
   isPending(user: PlexUser): boolean {

@@ -18,6 +18,7 @@ import com.removerr.library.dto.SeasonCard;
 import com.removerr.library.dto.ShowCard;
 import com.removerr.plexuser.PlexUser;
 import com.removerr.plexuser.PlexUserRepository;
+import com.removerr.plexuser.ServerAccess;
 import com.removerr.trash.TrashItemRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -203,7 +204,7 @@ public class MediaAggregationService {
     // ── Private helpers — viewer computation ─────────────────────────────────
 
     private Map<Integer, Long> loadCountedAccountToUserId() {
-        return plexUserRepository.findByCountedTrueAndServerAccessTrueAndPlexAccountIdIsNotNull().stream()
+        return plexUserRepository.findByCountedTrueAndServerAccessNotAndPlexAccountIdIsNotNull(ServerAccess.NONE).stream()
                 .collect(Collectors.toMap(PlexUser::getPlexAccountId, PlexUser::getId));
     }
 
