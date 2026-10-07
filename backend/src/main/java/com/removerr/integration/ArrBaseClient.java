@@ -49,12 +49,15 @@ public abstract class ArrBaseClient {
                 .bodyToMono(responseType));
     }
 
-    // Returns null instead of throwing when the resource is not found (HTTP 404).
+    // Returns null instead of throwing when the resource is not found (HTTP 404). Not done with
+    // onStatus(404, Mono.empty()): that means "not an error" to WebClient, which would then
+    // decode the JSON error body into a half-empty DTO instead of returning null.
     protected <T> T getOrNull(String path, Class<T> responseType) {
-        return execute(errorHandled(
-                client.get().uri(baseUrl() + path).header("X-Api-Key", apiKey()).retrieve()
-                        .onStatus(status -> status.value() == 404, resp -> Mono.empty()))
-                .bodyToMono(responseType));
+        try {
+            return get(path, responseType);
+        } catch (ResourceNotFoundException e) {
+            return null;
+        }
     }
 
     protected <T> List<T> getList(String path, ParameterizedTypeReference<List<T>> typeRef) {
@@ -108,8 +111,10 @@ public abstract class ArrBaseClient {
     }
 
     private static Mono<? extends Throwable> toIntegrationError(ClientResponse resp) {
-        return Mono.error(new IntegrationException(
-                "Request failed: " + resp.request().getMethod() + " → HTTP " + resp.statusCode().value()));
+        String message = "Request failed: " + resp.request().getMethod() + " → HTTP " + resp.statusCode().value();
+        return Mono.error(resp.statusCode().value() == 404
+                ? new ResourceNotFoundException(message)
+                : new IntegrationException(message));
     }
 
     // WebClientRequestException signals a transport failure (host down, DNS,

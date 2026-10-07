@@ -91,4 +91,22 @@ class RadarrClientTest {
         assertThat(movie.id()).isEqualTo(42);
         assertThat(movie.title()).isEqualTo("Dune");
     }
+
+    @Test
+    void getMovieOrNull_returnsNullOn404WithErrorBody() {
+        // Radarr answers a missing movie with a JSON error body, not an empty one.
+        stubFor(get(urlEqualTo("/api/v3/movie/999"))
+                .willReturn(aResponse().withStatus(404)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("{\"message\": \"NotFound\", \"description\": \"Movie with ID 999 does not exist\"}")));
+
+        assertThat(radarrClient.getMovieOrNull(999)).isNull();
+    }
+
+    @Test
+    void getMovieOrNull_stillThrowsOnServerError() {
+        stubFor(get(urlEqualTo("/api/v3/movie/1")).willReturn(aResponse().withStatus(500)));
+
+        assertThatThrownBy(() -> radarrClient.getMovieOrNull(1)).isInstanceOf(IntegrationException.class);
+    }
 }
