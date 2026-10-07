@@ -2,6 +2,7 @@ package com.removerr.trash;
 
 import com.removerr.audit.AuditLogService;
 import com.removerr.integration.IntegrationException;
+import com.removerr.integration.ResourceNotFoundException;
 import com.removerr.integration.seerr.SeerrClient;
 import com.removerr.integration.radarr.RadarrClient;
 import com.removerr.integration.radarr.dto.RadarrMovie;
@@ -128,73 +129,90 @@ public class PurgeService {
         }
         int seriesId = item.getExternalId();
 
-        try {
-            List<SonarrEpisode> episodes = sonarrClient.getEpisodes(seriesId, seasonNumber);
-            List<Integer> episodeIds = episodes.stream().map(SonarrEpisode::id).toList();
-
-            // 1. Cancel in-flight downloads for these episodes
-            try {
-                List<Integer> queueItemIds = sonarrClient.getQueueForSeries(seriesId).stream()
-                        .filter(q -> q.episodeId() != null && episodeIds.contains(q.episodeId()))
-                        .map(SonarrQueueItem::id)
-                        .toList();
-                if (!queueItemIds.isEmpty()) {
-                    try {
-                        sonarrClient.deleteQueueItemsBulk(queueItemIds);
-                        log.debug("Cancelled {} queue item(s) for season {}-{}", queueItemIds.size(), seriesId, seasonNumber);
-                    } catch (IntegrationException e) {
-                        log.warn("Could not cancel queue items for season {}-{}: {}", seriesId, seasonNumber, e.getMessage());
-                    }
-                }
-            } catch (IntegrationException e) {
-                log.warn("Could not read Sonarr queue for series {}: {}", seriesId, e.getMessage());
-            }
-
-            // 2. Unmonitor every episode in the season (stops future searches at episode level)
-            if (!episodeIds.isEmpty()) {
-                try {
-                    sonarrClient.setEpisodesMonitored(episodeIds, false);
-                } catch (IntegrationException e) {
-                    log.warn("Could not unmonitor episodes of season {}-{}: {}", seriesId, seasonNumber, e.getMessage());
-                }
-            }
-
-            // 3. Bulk-delete every downloaded file of the season
-            List<Integer> episodeFileIds = episodes.stream()
-                    .map(SonarrEpisode::episodeFileId)
-                    .filter(id -> id != null && id > 0)
-                    .toList();
-            if (!episodeFileIds.isEmpty()) {
-                try {
-                    sonarrClient.deleteEpisodeFilesBulk(episodeFileIds);
-                } catch (IntegrationException e) {
-                    log.warn("Bulk delete failed for season {}-{}, falling back to per-file: {}", seriesId, seasonNumber, e.getMessage());
-                    for (Integer fileId : episodeFileIds) {
-                        try {
-                            sonarrClient.deleteEpisodeFile(fileId);
-                        } catch (IntegrationException e2) {
-                            log.warn("Could not delete episode file {} from Sonarr: {}", fileId, e2.getMessage());
-                        }
-                    }
-                }
-            }
-
-            // 4. Unmonitor the season itself
-            try {
-                sonarrClient.unmonitorSeason(seriesId, seasonNumber);
-            } catch (IntegrationException e) {
-                log.warn("Could not unmonitor season {}-{}: {}", seriesId, seasonNumber, e.getMessage());
-            }
-
-            log.debug("Purged season {}-{} from Sonarr ({} episodes, {} files)",
-                    seriesId, seasonNumber, episodeIds.size(), episodeFileIds.size());
-        } catch (IntegrationException e) {
-            log.info("Season {}-{} not found in Sonarr — already deleted externally",
-                    seriesId, seasonNumber);
+        if (sonarrClient.getSeriesOrNull(seriesId) == null) {
+            log.info("Series {} not found in Sonarr — season {} already deleted externally", seriesId, seasonNumber);
+            deleteSeerrSeasonRequests(item.getTvdbId(), seasonNumber);
+            return;
         }
+
+        // From here, a Sonarr failure must propagate: the item then stays in the trash and is
+        // retried at the next purge, instead of being dropped while its files are still on disk.
+        List<SonarrEpisode> episodes = sonarrClient.getEpisodes(seriesId, seasonNumber);
+        List<Integer> episodeIds = episodes.stream().map(SonarrEpisode::id).toList();
+
+        // 1. Cancel in-flight downloads for these episodes
+        try {
+            List<Integer> queueItemIds = sonarrClient.getQueueForSeries(seriesId).stream()
+                    .filter(q -> q.episodeId() != null && episodeIds.contains(q.episodeId()))
+                    .map(SonarrQueueItem::id)
+                    .toList();
+            if (!queueItemIds.isEmpty()) {
+                try {
+                    sonarrClient.deleteQueueItemsBulk(queueItemIds);
+                    log.debug("Cancelled {} queue item(s) for season {}-{}", queueItemIds.size(), seriesId, seasonNumber);
+                } catch (IntegrationException e) {
+                    log.warn("Could not cancel queue items for season {}-{}: {}", seriesId, seasonNumber, e.getMessage());
+                }
+            }
+        } catch (IntegrationException e) {
+            log.warn("Could not read Sonarr queue for series {}: {}", seriesId, e.getMessage());
+        }
+
+        // 2. Unmonitor every episode in the season (stops future searches at episode level)
+        if (!episodeIds.isEmpty()) {
+            try {
+                sonarrClient.setEpisodesMonitored(episodeIds, false);
+            } catch (IntegrationException e) {
+                log.warn("Could not unmonitor episodes of season {}-{}: {}", seriesId, seasonNumber, e.getMessage());
+            }
+        }
+
+        // 3. Delete every downloaded file of the season
+        List<Integer> episodeFileIds = episodes.stream()
+                .map(SonarrEpisode::episodeFileId)
+                .filter(id -> id != null && id > 0)
+                .toList();
+        deleteEpisodeFiles(seriesId, seasonNumber, episodeFileIds);
+
+        // 4. Unmonitor the season itself
+        try {
+            sonarrClient.unmonitorSeason(seriesId, seasonNumber);
+        } catch (IntegrationException e) {
+            log.warn("Could not unmonitor season {}-{}: {}", seriesId, seasonNumber, e.getMessage());
+        }
+
+        log.debug("Purged season {}-{} from Sonarr ({} episodes, {} files)",
+                seriesId, seasonNumber, episodeIds.size(), episodeFileIds.size());
 
         // 5. Drop Seerr request(s) covering this season
         deleteSeerrSeasonRequests(item.getTvdbId(), seasonNumber);
+    }
+
+    // Bulk first, then file by file. A file already gone (404) counts as deleted; any other
+    // failure throws, since the season isn't purged while files remain on disk.
+    private void deleteEpisodeFiles(int seriesId, int seasonNumber, List<Integer> episodeFileIds) {
+        if (episodeFileIds.isEmpty()) return;
+        try {
+            sonarrClient.deleteEpisodeFilesBulk(episodeFileIds);
+            return;
+        } catch (IntegrationException e) {
+            log.warn("Bulk delete failed for season {}-{}, falling back to per-file: {}", seriesId, seasonNumber, e.getMessage());
+        }
+        int failures = 0;
+        for (Integer fileId : episodeFileIds) {
+            try {
+                sonarrClient.deleteEpisodeFile(fileId);
+            } catch (ResourceNotFoundException alreadyGone) {
+                log.debug("Episode file {} already deleted from Sonarr", fileId);
+            } catch (IntegrationException e) {
+                failures++;
+                log.warn("Could not delete episode file {} from Sonarr: {}", fileId, e.getMessage());
+            }
+        }
+        if (failures > 0) {
+            throw new IntegrationException("Could not delete " + failures + " file(s) of season "
+                    + seriesId + "-" + seasonNumber);
+        }
     }
 
     private void deleteSeerrSeasonRequests(Integer tvdbId, int seasonNumber) {
