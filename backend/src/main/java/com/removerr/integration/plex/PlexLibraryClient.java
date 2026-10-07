@@ -83,9 +83,11 @@ public class PlexLibraryClient {
         return response.mediaContainer().machineIdentifier();
     }
 
+    // Newest first: past the limit, the oldest views are the ones dropped. Ascending order
+    // would drop the recent ones and make freshly watched items look safe to delete.
     public List<PlexHistoryEntry> getViewHistory(int limit) {
         PlexHistoryContainer response = client.get()
-                .uri(serverUrl() + "/status/sessions/history/all?sort=viewedAt:asc" +
+                .uri(serverUrl() + "/status/sessions/history/all?sort=viewedAt:desc" +
                      "&X-Plex-Container-Start=0&X-Plex-Container-Size=" + limit)
                 .header("X-Plex-Token", ownerToken())
                 .retrieve()
