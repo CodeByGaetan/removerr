@@ -132,10 +132,11 @@ class PlexUserServiceTest {
     }
 
     @Test
-    void accessGrants_homeWinsOverShareAndFlagsManagedUsers() {
+    void accessGrants_homeWinsOverShareFlagsManagedUsersAndSkipsGuest() {
         Map<Long, ServerAccess> grants = PlexUserService.accessGrants(
                 Set.of(1L, 2L),
-                List.of(new PlexHomeUser(2L, false), new PlexHomeUser(3L, true)));
+                List.of(new PlexHomeUser(2L, false, false), new PlexHomeUser(3L, true, false),
+                        new PlexHomeUser(4L, true, true)));
 
         assertThat(grants).containsExactlyInAnyOrderEntriesOf(Map.of(
                 1L, ServerAccess.SHARED, 2L, ServerAccess.HOME, 3L, ServerAccess.MANAGED));

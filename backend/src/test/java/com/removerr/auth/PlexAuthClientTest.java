@@ -42,19 +42,21 @@ class PlexAuthClientTest {
     }
 
     @Test
-    void homeUsersResponse_readsIdAndRestrictedFromObservedFormat() throws Exception {
+    void homeUsersResponse_readsIdRestrictedAndGuestFromObservedFormat() throws Exception {
         // Shape returned by plex.tv/api/v2/home/users on a real account (personal fields removed).
         String json = """
                 {"subscription": true, "users": [
                   {"id": 76217485, "uuid": "x", "title": "x", "username": "x", "hasPassword": true,
                    "restricted": false, "admin": false, "guest": false, "protected": true},
-                  {"id": 99, "uuid": "y", "title": "Kid", "restricted": true}
+                  {"id": 869858736, "uuid": "y", "title": "Guest", "restricted": true, "guest": true},
+                  {"id": 99, "uuid": "z", "title": "Kid", "restricted": true, "guest": false}
                 ]}""";
 
         PlexHomeUsersResponse response = new ObjectMapper()
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
                 .readValue(json, PlexHomeUsersResponse.class);
 
-        assertThat(response.users()).containsExactly(new PlexHomeUser(76217485L, false), new PlexHomeUser(99L, true));
+        assertThat(response.users()).containsExactly(new PlexHomeUser(76217485L, false, false),
+                new PlexHomeUser(869858736L, true, true), new PlexHomeUser(99L, true, false));
     }
 }

@@ -78,11 +78,16 @@ public class PlexUserService {
         updateServerAccess(grants);
     }
 
-    /** plex.tv id → access. Home wins over a share: a member reaches the server either way. */
+    /**
+     * plex.tv id → access. Home wins over a share: a member reaches the server either way.
+     * The Home's built-in guest profile is skipped: it's not a person to list or count.
+     */
     static Map<Long, ServerAccess> accessGrants(Set<Long> sharedUserIds, List<PlexHomeUser> homeUsers) {
         Map<Long, ServerAccess> grants = new HashMap<>();
         sharedUserIds.forEach(id -> grants.put(id, ServerAccess.SHARED));
-        homeUsers.forEach(u -> grants.put(u.id(), u.restricted() ? ServerAccess.MANAGED : ServerAccess.HOME));
+        homeUsers.stream()
+                .filter(u -> !u.guest())
+                .forEach(u -> grants.put(u.id(), u.restricted() ? ServerAccess.MANAGED : ServerAccess.HOME));
         return grants;
     }
 
