@@ -19,7 +19,7 @@ public class SeerrClient extends ArrBaseClient {
 
     private static final int PAGE_SIZE = 100;
 
-    // Self proxy: required so findByXxx() goes through the AOP proxy when calling
+    // Self proxy: required so the find methods go through the AOP proxy when calling
     // getAllRequests(), otherwise @Cacheable is bypassed by self-invocation.
     private final SeerrClient self;
 
@@ -47,15 +47,19 @@ public class SeerrClient extends ArrBaseClient {
         return all;
     }
 
-    public Optional<SeerrRequest> findByTmdbId(int tmdbId) {
+    // TMDB numbers movies and TV shows separately: the same id can be both a movie and a show,
+    // so the request type must be checked too.
+    public Optional<SeerrRequest> findMovieByTmdbId(int tmdbId) {
         return self.getAllRequests().stream()
-                .filter(r -> r.media() != null && tmdbId == r.media().tmdbId())
+                .filter(r -> SeerrRequest.MOVIE.equals(r.type()) && r.media() != null
+                        && Integer.valueOf(tmdbId).equals(r.media().tmdbId()))
                 .findFirst();
     }
 
-    public Optional<SeerrRequest> findByTvdbId(int tvdbId) {
+    public Optional<SeerrRequest> findShowByTvdbId(int tvdbId) {
         return self.getAllRequests().stream()
-                .filter(r -> r.media() != null && Integer.valueOf(tvdbId).equals(r.media().tvdbId()))
+                .filter(r -> SeerrRequest.TV.equals(r.type()) && r.media() != null
+                        && Integer.valueOf(tvdbId).equals(r.media().tvdbId()))
                 .findFirst();
     }
 

@@ -10,4 +10,7 @@ public record SeerrRequest(
         SeerrRequestedBy requestedBy,
         List<SeerrSeasonRef> seasons,
         String createdAt
-) {}
+) {
+    public static final String MOVIE = "movie";
+    public static final String TV = "tv";
+}
