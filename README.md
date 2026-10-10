@@ -34,8 +34,8 @@ shipped as a single Docker container.
   revoking access takes effect immediately. An hourly job (also run at startup) checks the accepted
   shares and the Plex Home members on plex.tv: an account that no longer reaches the server is
   hidden and loses its role. Plex Home managed users stay counted for views but can never sign in
-  (they have no plex.tv credentials). Plex Home support follows the plex.tv API but hasn't been
-  verified against a real Home yet — unmatched members are logged by the sync.
+  (they have no plex.tv credentials). Like any Plex account, a new friend or Home member only shows
+  up once they have used the server: Plex creates its local account on first use.
 
 ## Tech stack
 
