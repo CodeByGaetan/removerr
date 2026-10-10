@@ -15,6 +15,9 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -110,7 +113,7 @@ class PlexUserServiceTest {
         hugo.setRole(Role.USER);
         when(repository.findAll()).thenReturn(List.of(hugo));
 
-        service.updateServerAccess(Map.of(176554347L, ServerAccess.SHARED));
+        service.updateServerAccess(grants(176554347L, ServerAccess.SHARED));
 
         assertThat(hugo.getServerAccess()).isEqualTo(ServerAccess.NONE);
         assertThat(hugo.getRole()).isEqualTo(Role.NONE);
@@ -124,7 +127,7 @@ class PlexUserServiceTest {
         hugo.setServerAccess(ServerAccess.NONE);
         when(repository.findAll()).thenReturn(List.of(hugo));
 
-        service.updateServerAccess(Map.of(35867154L, ServerAccess.SHARED));
+        service.updateServerAccess(grants(35867154L, ServerAccess.SHARED));
 
         assertThat(hugo.getServerAccess()).isEqualTo(ServerAccess.SHARED);
         assertThat(hugo.getRole()).isEqualTo(Role.NONE);
@@ -132,14 +135,40 @@ class PlexUserServiceTest {
     }
 
     @Test
-    void accessGrants_homeWinsOverShareFlagsManagedUsersAndSkipsGuest() {
-        Map<Long, ServerAccess> grants = PlexUserService.accessGrants(
-                Set.of(1L, 2L),
-                List.of(new PlexHomeUser(2L, false, false), new PlexHomeUser(3L, true, false),
-                        new PlexHomeUser(4L, true, true)));
+    void accessGrants_homeWinsOverShareFlagsManagedUsersAndDropsGuest() {
+        // Home members also get a share entry, the guest profile included.
+        Map<Long, AccessGrant> grants = PlexUserService.accessGrants(
+                Map.of(1L, "Friend", 2L, "Partner", 4L, "Guest"),
+                List.of(new PlexHomeUser(2L, "Partner", false, false), new PlexHomeUser(3L, "Kid", true, false),
+                        new PlexHomeUser(4L, "Guest", true, true)));
 
         assertThat(grants).containsExactlyInAnyOrderEntriesOf(Map.of(
-                1L, ServerAccess.SHARED, 2L, ServerAccess.HOME, 3L, ServerAccess.MANAGED));
+                1L, new AccessGrant(ServerAccess.SHARED, "Friend"),
+                2L, new AccessGrant(ServerAccess.HOME, "Partner"),
+                3L, new AccessGrant(ServerAccess.MANAGED, "Kid")));
+    }
+
+    @Test
+    void createMissingAccounts_addsUsersWithAccessBeforeTheirFirstUse() {
+        when(repository.findByPlexAccountId(anyInt())).thenReturn(Optional.empty());
+        when(repository.findByPlexTvId(anyLong())).thenReturn(Optional.empty());
+
+        service.createMissingAccounts(grants(869858737L, ServerAccess.MANAGED));
+
+        verify(repository).save(argThat(u -> u.getPlexAccountId() == 869858737 && "user".equals(u.getName())));
+    }
+
+    @Test
+    void createMissingAccounts_skipsKnownLocalAccountsAndTheOwner() {
+        when(repository.findByPlexAccountId(176554347)).thenReturn(Optional.of(synced(176554347, "Emilien", null)));
+        when(repository.findByPlexAccountId(76217485)).thenReturn(Optional.empty());
+        when(repository.findByPlexTvId(76217485L)).thenReturn(Optional.of(new PlexUser(76217485L, "owner", null, null, null, null)));
+
+        service.createMissingAccounts(Map.of(
+                176554347L, new AccessGrant(ServerAccess.SHARED, "Emilien"),
+                76217485L, new AccessGrant(ServerAccess.HOME, "owner")));
+
+        verify(repository, never()).save(any());
     }
 
     @Test
@@ -148,7 +177,7 @@ class PlexUserServiceTest {
         kid.setRole(Role.USER);
         when(repository.findAll()).thenReturn(List.of(kid));
 
-        service.updateServerAccess(Map.of(42L, ServerAccess.MANAGED));
+        service.updateServerAccess(grants(42L, ServerAccess.MANAGED));
 
         assertThat(kid.getServerAccess()).isEqualTo(ServerAccess.MANAGED);
         assertThat(kid.getRole()).isEqualTo(Role.NONE);
@@ -160,7 +189,7 @@ class PlexUserServiceTest {
         partner.setRole(Role.ADMIN);
         when(repository.findAll()).thenReturn(List.of(partner));
 
-        service.updateServerAccess(Map.of(43L, ServerAccess.HOME));
+        service.updateServerAccess(grants(43L, ServerAccess.HOME));
 
         assertThat(partner.getServerAccess()).isEqualTo(ServerAccess.HOME);
         assertThat(partner.getRole()).isEqualTo(Role.ADMIN);
@@ -182,7 +211,7 @@ class PlexUserServiceTest {
         PlexUser emilien = synced(176554347, "Emilien", null);
         when(repository.findAll()).thenReturn(List.of(owner, emilien));
 
-        service.updateServerAccess(Map.of(176554347L, ServerAccess.SHARED));
+        service.updateServerAccess(grants(176554347L, ServerAccess.SHARED));
 
         assertThat(owner.getServerAccess()).isEqualTo(ServerAccess.OWNER);
         verify(repository, never()).save(any());
@@ -192,7 +221,7 @@ class PlexUserServiceTest {
     void syncWithServer_leavesAccessUntouchedWhenPlexTvFails() {
         when(plexClient.findOwnerToken()).thenReturn(Optional.of("token"));
         when(plexClient.getMachineIdentifier()).thenReturn("machine");
-        when(plexTvClient.getSharedUserIds("token", "machine")).thenThrow(new IllegalStateException("down"));
+        when(plexTvClient.getSharedUsers("token", "machine")).thenThrow(new IllegalStateException("down"));
 
         assertThatThrownBy(service::syncWithServer).hasMessage("down");
         verify(repository, never()).save(any());
@@ -205,7 +234,7 @@ class PlexUserServiceTest {
 
         assertThatThrownBy(service::syncWithServer).isInstanceOf(IntegrationException.class);
         verify(repository, never()).save(any());
-        verify(plexTvClient, never()).getSharedUserIds(anyString(), anyString());
+        verify(plexTvClient, never()).getSharedUsers(anyString(), anyString());
     }
 
     @Test
@@ -243,6 +272,10 @@ class PlexUserServiceTest {
         assertThat(publicView.plexAccountId()).isNull();
         assertThat(adminView.role()).isEqualTo(Role.ADMIN);
         assertThat(adminView.lastLoginAt()).isNotNull();
+    }
+
+    private static Map<Long, AccessGrant> grants(long plexTvId, ServerAccess access) {
+        return Map.of(plexTvId, new AccessGrant(access, "user"));
     }
 
     private static PlexUser synced(int plexAccountId, String name, String thumb) {

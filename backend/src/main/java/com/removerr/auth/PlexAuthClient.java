@@ -12,10 +12,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Component
 public class PlexAuthClient {
@@ -83,7 +83,7 @@ public class PlexAuthClient {
      * plex.tv ids of the users with an accepted share on the given server. The server's own
      * /accounts can't answer this: it keeps every account that ever had history on it.
      */
-    public Set<Long> getSharedUserIds(String ownerToken, String machineIdentifier) {
+    public Map<Long, String> getSharedUsers(String ownerToken, String machineIdentifier) {
         List<PlexSharedServer> shares = plexClient.get()
                 .uri("/api/v2/shared_servers/owned/accepted")
                 .header("X-Plex-Token", ownerToken)
@@ -95,27 +95,27 @@ public class PlexAuthClient {
         if (shares == null) {
             throw new IllegalStateException("Empty shared servers response from Plex");
         }
-        return sharedUserIdsFor(shares, machineIdentifier);
+        return sharedUsersFor(shares, machineIdentifier);
     }
 
     /**
-     * Active shares, as plex.tv ids, for the given server. Shares that exist but none for
+     * Active shares of the given server, as plex.tv id → name. Shares that exist but none for
      * this server means its machine identifier changed (reinstall, migration): treating that
      * as "nobody has access" would strip every user's role, so it fails instead.
      */
-    static Set<Long> sharedUserIdsFor(List<PlexSharedServer> shares, String machineIdentifier) {
+    static Map<Long, String> sharedUsersFor(List<PlexSharedServer> shares, String machineIdentifier) {
         List<PlexSharedServer> active = shares.stream()
                 .filter(s -> s.deletedAt() == null && s.leftAt() == null)
                 .toList();
-        Set<Long> ids = active.stream()
+        Map<Long, String> users = new LinkedHashMap<>();
+        active.stream()
                 .filter(s -> machineIdentifier.equals(s.machineIdentifier()))
-                .map(PlexSharedServer::invitedId)
-                .collect(Collectors.toSet());
-        if (ids.isEmpty() && !active.isEmpty()) {
+                .forEach(s -> users.putIfAbsent(s.invitedId(), s.invitedName()));
+        if (users.isEmpty() && !active.isEmpty()) {
             throw new IntegrationException("plex.tv lists " + active.size()
                     + " share(s), none for server " + machineIdentifier + " — did its identifier change?");
         }
-        return ids;
+        return users;
     }
 
     /**

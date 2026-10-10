@@ -19,7 +19,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 
 @Service
 public class PlexUserService {
@@ -63,11 +62,11 @@ public class PlexUserService {
             return;
         }
         List<PlexAccountEntry> accounts;
-        Map<Long, ServerAccess> grants;
+        Map<Long, AccessGrant> grants;
         try {
             accounts = plexClient.getAccounts();
             grants = accessGrants(
-                    plexTvClient.getSharedUserIds(ownerToken.get(), plexClient.getMachineIdentifier()),
+                    plexTvClient.getSharedUsers(ownerToken.get(), plexClient.getMachineIdentifier()),
                     plexTvClient.getHomeUsers(ownerToken.get()));
         } catch (ServiceNotConfiguredException e) {
             log.info("Plex not configured — skipping user sync");
@@ -75,26 +74,48 @@ public class PlexUserService {
         }
         upsertAccounts(accounts);
         warnIfOwnerUnlinked();
+        createMissingAccounts(grants);
         updateServerAccess(grants);
     }
 
     /**
-     * plex.tv id → access. Home wins over a share: a member reaches the server either way.
-     * The Home's built-in guest profile is skipped: it's not a person to list or count.
+     * plex.tv id → access. Home wins over a share: Home members also get a share entry (it
+     * carries their library restrictions). The Home's built-in guest profile is dropped from
+     * both lists: it's not a person to list or count.
      */
-    static Map<Long, ServerAccess> accessGrants(Set<Long> sharedUserIds, List<PlexHomeUser> homeUsers) {
-        Map<Long, ServerAccess> grants = new HashMap<>();
-        sharedUserIds.forEach(id -> grants.put(id, ServerAccess.SHARED));
-        homeUsers.stream()
-                .filter(u -> !u.guest())
-                .forEach(u -> grants.put(u.id(), u.restricted() ? ServerAccess.MANAGED : ServerAccess.HOME));
+    static Map<Long, AccessGrant> accessGrants(Map<Long, String> sharedUsers, List<PlexHomeUser> homeUsers) {
+        Map<Long, AccessGrant> grants = new HashMap<>();
+        sharedUsers.forEach((id, name) -> grants.put(id, new AccessGrant(ServerAccess.SHARED, name)));
+        for (PlexHomeUser member : homeUsers) {
+            if (member.guest()) {
+                grants.remove(member.id());
+                continue;
+            }
+            ServerAccess access = member.restricted() ? ServerAccess.MANAGED : ServerAccess.HOME;
+            grants.put(member.id(), new AccessGrant(access, member.title()));
+        }
         return grants;
     }
 
+    /**
+     * Gives a row to everyone with access, before Plex creates their local account on first
+     * use, so an admin can grant a role ahead of time. That local account will use their
+     * plex.tv id (checked for friends and Home members), so /accounts then matches this row.
+     */
+    void createMissingAccounts(Map<Long, AccessGrant> grants) {
+        grants.forEach((plexTvId, grant) -> {
+            if (plexTvId > Integer.MAX_VALUE || grant.name() == null || grant.name().isBlank()) return;
+            int localId = plexTvId.intValue();
+            if (repository.findByPlexAccountId(localId).isPresent()
+                    || repository.findByPlexTvId(plexTvId).isPresent()) return;
+            repository.save(new PlexUser(localId, grant.name()));
+            log.info("Added '{}' ({}) ahead of their first use of the server", grant.name(), grant.access());
+        });
+    }
+
     // Not @Transactional: see setRole.
-    void updateServerAccess(Map<Long, ServerAccess> grants) {
-        List<PlexUser> users = repository.findAll();
-        for (PlexUser user : users) {
+    void updateServerAccess(Map<Long, AccessGrant> grants) {
+        for (PlexUser user : repository.findAll()) {
             ServerAccess access = user.isOwner() ? ServerAccess.OWNER : grantFor(user, grants);
             ServerAccess previousAccess = user.getServerAccess();
             if (access == previousAccess) continue;
@@ -111,33 +132,15 @@ public class PlexUserService {
                         AuditLogService.meta("title", user.getName(), "from", previousRole, "to", Role.NONE));
             }
         }
-        logUnmatchedHomeMembers(users, grants);
     }
 
-    // A shared user's local account id equals their plex.tv id (checked on a real server),
-    // and logged-in users also carry their plex.tv id.
-    private static ServerAccess grantFor(PlexUser user, Map<Long, ServerAccess> grants) {
-        if (user.getPlexAccountId() != null && grants.containsKey(user.getPlexAccountId().longValue())) {
-            return grants.get(user.getPlexAccountId().longValue());
-        }
-        if (user.getPlexTvId() != null && grants.containsKey(user.getPlexTvId())) {
-            return grants.get(user.getPlexTvId());
-        }
-        return ServerAccess.NONE;
-    }
-
-    // Home members are assumed to follow the same id rule as friends, which couldn't be checked
-    // on a real Plex Home: make a mismatch visible instead of silently hiding the member.
-    private static void logUnmatchedHomeMembers(List<PlexUser> users, Map<Long, ServerAccess> grants) {
-        grants.forEach((plexTvId, access) -> {
-            if (access != ServerAccess.HOME && access != ServerAccess.MANAGED) return;
-            boolean matched = users.stream().anyMatch(u ->
-                    (u.getPlexAccountId() != null && u.getPlexAccountId().longValue() == plexTvId)
-                            || plexTvId.equals(u.getPlexTvId()));
-            if (!matched) {
-                log.info("Plex Home member (plexTvId={}) matches no account of the Plex server", plexTvId);
-            }
-        });
+    // A friend's or Home member's local account id equals their plex.tv id (checked on a real
+    // server), and logged-in users also carry their plex.tv id.
+    private static ServerAccess grantFor(PlexUser user, Map<Long, AccessGrant> grants) {
+        AccessGrant grant = null;
+        if (user.getPlexAccountId() != null) grant = grants.get(user.getPlexAccountId().longValue());
+        if (grant == null && user.getPlexTvId() != null) grant = grants.get(user.getPlexTvId());
+        return grant != null ? grant.access() : ServerAccess.NONE;
     }
 
     void upsertAccounts(List<PlexAccountEntry> accounts) {
