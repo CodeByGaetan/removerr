@@ -68,6 +68,9 @@ public class TrashService {
         String requestedBy = fetchSeerrRequestedByTmdb(movie.tmdbId());
 
         TrashItemResponse response = Objects.requireNonNull(txTemplate.execute(status -> {
+            if (trashRepo.existsByMediaTypeAndExternalId("MOVIE", radarrId)) {
+                throw new IllegalStateException("This movie is already in the trash");
+            }
             PlexUser user = plexUserRepository.getReferenceById(userId);
             TrashItem item = new TrashItem(
                     "MOVIE", "RADARR", radarrId,
@@ -97,6 +100,14 @@ public class TrashService {
         String requestedBy = fetchSeerrRequestedByTvdb(series.tvdbId());
 
         TrashItemResponse response = Objects.requireNonNull(txTemplate.execute(status -> {
+            if (trashRepo.existsByMediaTypeAndExternalId("SHOW", sonarrId)) {
+                throw new IllegalStateException("This show is already in the trash");
+            }
+            // The show's purge deletes every season: trashed seasons would only double-count.
+            long supersededSeasons = trashRepo.deleteByMediaTypeAndExternalId("SEASON", sonarrId);
+            if (supersededSeasons > 0) {
+                log.info("Show {} trashed: {} season item(s) it supersedes removed", sonarrId, supersededSeasons);
+            }
             PlexUser user = plexUserRepository.getReferenceById(userId);
             TrashItem item = new TrashItem(
                     "SHOW", "SONARR", sonarrId,
@@ -136,6 +147,12 @@ public class TrashService {
 
         String title = series.title() + " — Saison " + seasonNumber;
         TrashItemResponse response = Objects.requireNonNull(txTemplate.execute(status -> {
+            if (trashRepo.existsByMediaTypeAndExternalId("SHOW", sonarrId)) {
+                throw new IllegalStateException("This whole show is already in the trash");
+            }
+            if (trashRepo.existsByMediaTypeAndExternalIdAndSeasonNumber("SEASON", sonarrId, seasonNumber)) {
+                throw new IllegalStateException("This season is already in the trash");
+            }
             PlexUser user = plexUserRepository.getReferenceById(userId);
             TrashItem item = new TrashItem(
                     "SEASON", "SONARR", sonarrId,

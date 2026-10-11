@@ -18,4 +18,10 @@ public interface TrashItemRepository extends JpaRepository<TrashItem, Long> {
 
     @Query("SELECT t FROM TrashItem t WHERE t.mediaType = 'SEASON'")
     List<TrashItem> findTrashedSeasons();
+
+    boolean existsByMediaTypeAndExternalId(String mediaType, int externalId);
+
+    boolean existsByMediaTypeAndExternalIdAndSeasonNumber(String mediaType, int externalId, Integer seasonNumber);
+
+    long deleteByMediaTypeAndExternalId(String mediaType, int externalId);
 }
