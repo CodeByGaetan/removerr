@@ -5,8 +5,13 @@ import com.removerr.setting.dto.SettingsResponse;
 import com.removerr.setting.dto.UpdateSettingsRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.Instant;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class AppSettingService {
@@ -16,6 +21,11 @@ public class AppSettingService {
     private final AppSettingRepository repository;
     private final AesGcmEncryptor encryptor;
 
+    // Settings are read before every call to Plex/Radarr/Sonarr/Seerr, including from the
+    // library's parallel tasks: keeping them in memory stops those threads from competing for
+    // the single SQLite connection. Values are stored as in the DB (encrypted keys included).
+    private final Map<String, Optional<String>> storedValues = new ConcurrentHashMap<>();
+
     public AppSettingService(AppSettingRepository repository, AesGcmEncryptor encryptor) {
         this.repository = repository;
         this.encryptor = encryptor;
@@ -23,9 +33,9 @@ public class AppSettingService {
 
     // Returns raw (decrypted) value, or null if not set
     public String get(String key) {
-        return repository.findById(key)
-                .map(s -> isEncryptedKey(key) ? encryptor.decrypt(s.getValue()) : s.getValue())
-                .orElse(null);
+        String stored = stored(key);
+        if (stored == null) return null;
+        return isEncryptedKey(key) ? encryptor.decrypt(stored) : stored;
     }
 
     @Transactional
@@ -40,6 +50,18 @@ public class AppSettingService {
                 },
                 () -> repository.save(new AppSetting(key, stored, now))
         );
+        storedValues.put(key, Optional.of(stored));
+        forgetValuesIfRolledBack();
+    }
+
+    private void forgetValuesIfRolledBack() {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) return;
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                if (status != STATUS_COMMITTED) storedValues.clear();
+            }
+        });
     }
 
     public SettingsResponse getSettings() {
@@ -80,11 +102,17 @@ public class AppSettingService {
     }
 
     private String getRaw(String key) {
-        return repository.findById(key).map(AppSetting::getValue).orElse(null);
+        return stored(key);
     }
 
     private boolean isConfigured(String key) {
-        return repository.findById(key).map(s -> s.getValue() != null && !s.getValue().isBlank()).orElse(false);
+        String stored = stored(key);
+        return stored != null && !stored.isBlank();
+    }
+
+    private String stored(String key) {
+        return storedValues.computeIfAbsent(key, k -> repository.findById(k).map(AppSetting::getValue))
+                .orElse(null);
     }
 
     private void setIfPresent(String key, String value) {

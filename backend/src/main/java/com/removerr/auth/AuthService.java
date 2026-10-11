@@ -2,6 +2,7 @@ package com.removerr.auth;
 
 import com.removerr.auth.dto.*;
 import com.removerr.crypto.AesGcmEncryptor;
+import com.removerr.integration.plex.PlexLibraryClient;
 import com.removerr.plexuser.PlexUser;
 import com.removerr.plexuser.PlexUserRepository;
 import com.removerr.plexuser.PlexUserService;
@@ -25,16 +26,18 @@ public class AuthService {
     private final JwtService jwtService;
     private final PlexUserService plexUserService;
     private final TransactionTemplate txTemplate;
+    private final PlexLibraryClient plexLibraryClient;
 
     public AuthService(PlexAuthClient plexClient, PlexUserRepository plexUserRepository,
                        AesGcmEncryptor encryptor, JwtService jwtService, PlexUserService plexUserService,
-                       PlatformTransactionManager txManager) {
+                       PlatformTransactionManager txManager, PlexLibraryClient plexLibraryClient) {
         this.plexClient = plexClient;
         this.plexUserRepository = plexUserRepository;
         this.encryptor = encryptor;
         this.jwtService = jwtService;
         this.plexUserService = plexUserService;
         this.txTemplate = new TransactionTemplate(txManager);
+        this.plexLibraryClient = plexLibraryClient;
     }
 
     public CreatePinResponse createPin() {
@@ -51,12 +54,15 @@ public class AuthService {
         if (pin.authToken() == null) return PollResult.pending();
 
         PlexUserAccount info = plexClient.getUserInfo(pin.authToken());
-        return txTemplate.execute(status -> {
+        PollResult result = txTemplate.execute(status -> {
             PlexUser user = resolveUser(info, pin.authToken());
             String jwt = jwtService.generateToken(user);
             int countedTotal = (int) plexUserRepository.countByCountedTrueAndServerAccessNot(ServerAccess.NONE);
             return PollResult.success(toMeResponse(user, countedTotal), jwt);
         });
+        // After commit, so a concurrent read can't cache the token being replaced.
+        plexLibraryClient.forgetOwnerToken();
+        return result;
     }
 
     public MeResponse getMe(Long userId) {

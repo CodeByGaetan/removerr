@@ -122,9 +122,23 @@ public class PlexLibraryClient {
         return url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
     }
 
+    // Kept in memory for the same reason as the settings (read from the library's parallel
+    // tasks). A login can replace the owner's token: AuthService calls forgetOwnerToken().
+    private volatile String ownerTokenCache;
+
     public Optional<String> findOwnerToken() {
-        return plexUserRepository.findByOwnerTrue()
-                .map(u -> encryptor.decrypt(u.getPlexTokenEncrypted()));
+        String token = ownerTokenCache;
+        if (token == null) {
+            token = plexUserRepository.findByOwnerTrue()
+                    .map(u -> encryptor.decrypt(u.getPlexTokenEncrypted()))
+                    .orElse(null);
+            ownerTokenCache = token;
+        }
+        return Optional.ofNullable(token);
+    }
+
+    public void forgetOwnerToken() {
+        ownerTokenCache = null;
     }
 
     private String ownerToken() {

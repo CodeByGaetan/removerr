@@ -17,6 +17,8 @@ import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @WireMockTest
@@ -59,5 +61,16 @@ class PlexLibraryClientTest {
         when(settings.get(AppSettingKey.PLEX_SERVER_URL)).thenReturn("http://localhost:1");
 
         assertThatThrownBy(client::getSections).isInstanceOf(IntegrationException.class);
+    }
+
+    @Test
+    void ownerToken_isReadOnceUntilForgotten() {
+        client.findOwnerToken();
+        client.findOwnerToken();
+        verify(repository, times(1)).findByOwnerTrue();
+
+        client.forgetOwnerToken();
+        client.findOwnerToken();
+        verify(repository, times(2)).findByOwnerTrue();
     }
 }

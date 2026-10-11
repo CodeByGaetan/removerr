@@ -4,6 +4,7 @@ import com.removerr.auth.dto.PlexPin;
 import com.removerr.auth.dto.PlexUserAccount;
 import com.removerr.auth.dto.PollPinResponse;
 import com.removerr.crypto.AesGcmEncryptor;
+import com.removerr.integration.plex.PlexLibraryClient;
 import com.removerr.plexuser.PlexUser;
 import com.removerr.plexuser.PlexUserRepository;
 import com.removerr.plexuser.PlexUserService;
@@ -39,7 +40,7 @@ class AuthServiceTest {
     private final PlexUserService plexUserService = mock(PlexUserService.class);
     private final AuthService authService =
             new AuthService(plexClient, repository, encryptor, jwtService, plexUserService,
-                    mock(PlatformTransactionManager.class));
+                    mock(PlatformTransactionManager.class), mock(PlexLibraryClient.class));
 
     @BeforeEach
     void setUp() {
