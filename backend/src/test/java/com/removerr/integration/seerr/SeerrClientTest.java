@@ -29,21 +29,29 @@ class SeerrClientTest {
     }
 
     @Test
-    void findMovieByTmdbId_ignoresShowWithSameTmdbId() {
-        assertThat(client.findMovieByTmdbId(SHARED_TMDB_ID)).contains(movieRequest);
+    void findMovieRequestsByTmdbId_ignoresShowWithSameTmdbId() {
+        assertThat(client.findMovieRequestsByTmdbId(SHARED_TMDB_ID)).containsExactly(movieRequest);
     }
 
     @Test
-    void findShowByTvdbId_onlyMatchesShows() {
-        assertThat(client.findShowByTvdbId(121361)).contains(showRequest);
+    void findMovieRequestsByTmdbId_returnsEveryRequestOfTheMovie() {
+        SeerrRequest fourK = request(4, SeerrRequest.MOVIE, SHARED_TMDB_ID, null);
+        when(self.getAllRequests()).thenReturn(List.of(movieRequest, showRequest, fourK));
+
+        assertThat(client.findMovieRequestsByTmdbId(SHARED_TMDB_ID)).containsExactly(movieRequest, fourK);
     }
 
     @Test
-    void findMovieByTmdbId_toleratesRequestsWithoutTmdbId() {
+    void findShowRequestsByTvdbId_onlyMatchesShows() {
+        assertThat(client.findShowRequestsByTvdbId(121361)).containsExactly(showRequest);
+    }
+
+    @Test
+    void findMovieRequestsByTmdbId_toleratesRequestsWithoutTmdbId() {
         SeerrRequest withoutTmdbId = request(3, SeerrRequest.MOVIE, null, null);
         when(self.getAllRequests()).thenReturn(List.of(withoutTmdbId, movieRequest));
 
-        assertThat(client.findMovieByTmdbId(SHARED_TMDB_ID)).contains(movieRequest);
+        assertThat(client.findMovieRequestsByTmdbId(SHARED_TMDB_ID)).containsExactly(movieRequest);
     }
 
     private static SeerrRequest request(int id, String type, Integer tmdbId, Integer tvdbId) {

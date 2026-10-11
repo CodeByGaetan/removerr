@@ -228,8 +228,8 @@ public class PurgeService {
     private void deleteSeerrByTmdb(Integer tmdbId) {
         if (tmdbId == null) return;
         try {
-            seerrClient.findMovieByTmdbId(tmdbId)
-                    .ifPresent(r -> seerrClient.deleteRequest(r.id()));
+            seerrClient.findMovieRequestsByTmdbId(tmdbId)
+                    .forEach(r -> seerrClient.deleteRequest(r.id()));
         } catch (IntegrationException e) {
             log.warn("Seerr cleanup skipped for tmdbId {}: {}", tmdbId, e.getMessage());
         }
@@ -238,8 +238,8 @@ public class PurgeService {
     private void deleteSeerrByTvdb(Integer tvdbId) {
         if (tvdbId == null) return;
         try {
-            seerrClient.findShowByTvdbId(tvdbId)
-                    .ifPresent(r -> seerrClient.deleteRequest(r.id()));
+            seerrClient.findShowRequestsByTvdbId(tvdbId)
+                    .forEach(r -> seerrClient.deleteRequest(r.id()));
         } catch (IntegrationException e) {
             log.warn("Seerr cleanup skipped for tvdbId {}: {}", tvdbId, e.getMessage());
         }

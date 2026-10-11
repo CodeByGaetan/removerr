@@ -12,7 +12,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 @Component
 public class SeerrClient extends ArrBaseClient {
@@ -48,24 +47,24 @@ public class SeerrClient extends ArrBaseClient {
     }
 
     // TMDB numbers movies and TV shows separately: the same id can be both a movie and a show,
-    // so the request type must be checked too.
-    public Optional<SeerrRequest> findMovieByTmdbId(int tmdbId) {
+    // so the request type must be checked too. A media can have several requests (e.g. a 4K one).
+    public List<SeerrRequest> findMovieRequestsByTmdbId(int tmdbId) {
         return self.getAllRequests().stream()
                 .filter(r -> SeerrRequest.MOVIE.equals(r.type()) && r.media() != null
                         && Integer.valueOf(tmdbId).equals(r.media().tmdbId()))
-                .findFirst();
+                .toList();
     }
 
-    public Optional<SeerrRequest> findShowByTvdbId(int tvdbId) {
+    public List<SeerrRequest> findShowRequestsByTvdbId(int tvdbId) {
         return self.getAllRequests().stream()
                 .filter(r -> SeerrRequest.TV.equals(r.type()) && r.media() != null
                         && Integer.valueOf(tvdbId).equals(r.media().tvdbId()))
-                .findFirst();
+                .toList();
     }
 
     public List<SeerrRequest> findRequestsByTvdbAndSeason(int tvdbId, int seasonNumber) {
         return self.getAllRequests().stream()
-                .filter(r -> r.media() != null
+                .filter(r -> SeerrRequest.TV.equals(r.type()) && r.media() != null
                         && Integer.valueOf(tvdbId).equals(r.media().tvdbId())
                         && r.seasons() != null
                         && r.seasons().stream().anyMatch(s -> s.seasonNumber() == seasonNumber))

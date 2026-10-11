@@ -205,7 +205,7 @@ public class TrashService {
     private String fetchSeerrRequestedByTmdb(Integer tmdbId) {
         if (tmdbId == null) return null;
         try {
-            return seerrClient.findMovieByTmdbId(tmdbId)
+            return seerrClient.findMovieRequestsByTmdbId(tmdbId).stream().findFirst()
                     .map(r -> r.requestedBy() != null ? r.requestedBy().displayName() : null)
                     .orElse(null);
         } catch (IntegrationException e) {
@@ -217,7 +217,7 @@ public class TrashService {
     private String fetchSeerrRequestedByTvdb(Integer tvdbId) {
         if (tvdbId == null) return null;
         try {
-            return seerrClient.findShowByTvdbId(tvdbId)
+            return seerrClient.findShowRequestsByTvdbId(tvdbId).stream().findFirst()
                     .map(r -> r.requestedBy() != null ? r.requestedBy().displayName() : null)
                     .orElse(null);
         } catch (IntegrationException e) {
