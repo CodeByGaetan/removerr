@@ -10,8 +10,6 @@ public record PlexMetadata(
         int year,
         String thumb,
         int viewCount,
-        int viewedLeafCount,   // watched episodes (shows); 0 for movies
-        int leafCount,         // total episodes (shows); 0 for movies
         @JsonProperty("Guid") List<PlexGuid> guids
 ) {
     public Integer tmdbId() {

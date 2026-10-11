@@ -45,8 +45,6 @@ export interface ShowCard {
   addedAt: string;
   seasons: SeasonCard[];
   seerr: SeerrInfo | null;
-  plexWatchedEpisodes: number | null;
-  plexTotalEpisodes: number | null;
   plexViewerUserIds: number[] | null;
 }
 

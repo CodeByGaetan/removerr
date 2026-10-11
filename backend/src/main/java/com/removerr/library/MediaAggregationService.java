@@ -182,8 +182,6 @@ public class MediaAggregationService {
                             s.added(),
                             seasons,
                             seerrMap.get(s.tvdbId()),
-                            plexShow != null ? plexShow.viewedLeafCount() : null,
-                            plexShow != null ? plexShow.leafCount() : null,
                             showViewerUserIds
                     );
                 })
