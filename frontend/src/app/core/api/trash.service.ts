@@ -53,19 +53,28 @@ export class TrashService {
 
   trashMovie(radarrId: number, immediate = false): Observable<TrashItem> {
     return this.http.post<TrashItem>('/api/trash/movies', { radarrId, immediate }).pipe(
-      tap((item) => this.trashItems.update((items) => [item, ...items])),
+      tap((item) => this.addToTrash(item)),
     );
   }
 
   trashShow(sonarrId: number, immediate = false): Observable<TrashItem> {
     return this.http.post<TrashItem>('/api/trash/shows', { sonarrId, immediate }).pipe(
-      tap((item) => this.trashItems.update((items) => [item, ...items])),
+      tap((item) => this.addToTrash(item)),
     );
   }
 
+  // The backend trashes the whole show when the season is its only visible one: the returned
+  // item is then a SHOW.
   trashSeason(sonarrId: number, seasonNumber: number, immediate = false): Observable<TrashItem> {
     return this.http.post<TrashItem>('/api/trash/seasons', { sonarrId, seasonNumber, immediate }).pipe(
-      tap((item) => this.trashItems.update((items) => [item, ...items])),
+      tap((item) => this.addToTrash(item)),
     );
+  }
+
+  // A trashed show replaces its season items on the backend: mirror it in the list.
+  private addToTrash(item: TrashItem): void {
+    const supersedes = (i: TrashItem) =>
+      item.mediaType === 'SHOW' && i.mediaType === 'SEASON' && i.externalId === item.externalId;
+    this.trashItems.update((items) => [item, ...items.filter((i) => !supersedes(i))]);
   }
 }

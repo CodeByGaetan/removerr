@@ -189,13 +189,19 @@ export class LibraryDetailComponent implements OnDestroy {
     } else {
       const s = this.show()!;
       this.trashService.trashSeason(s.sonarrId, action.season.seasonNumber, immediate).subscribe({
-        next: () => {
+        next: (item) => {
+          this.trashing.set(false);
+          this.modalAction.set(null);
+          if (item.mediaType === 'SHOW') {
+            this.library.removeShow(s.sonarrId);
+            this.toast.show(messages.trash.itemTrashed(this.title()));
+            this.close.emit();
+            return;
+          }
           this.library.removeSeason(s.sonarrId, action.season.seasonNumber);
           this.toast.show(
             messages.trash.seasonTrashed(action.season.seasonNumber, this.title()),
           );
-          this.trashing.set(false);
-          this.modalAction.set(null);
         },
         error: () => {
           this.toast.show(messages.trash.trashError, 'error');
