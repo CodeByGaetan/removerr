@@ -125,10 +125,7 @@ export class LibraryComponent {
     let items = [...this.library.movies()];
     const q = this.searchQuery().trim().toLowerCase();
     if (q) items = items.filter((m) => m.title.toLowerCase().includes(q));
-    items = this.applyAvailabilityFilter(items);
-    const watched = this.watchedFilter();
-    if (watched === 'watched') items = items.filter((m) => (m.plexViewerUserIds?.length ?? 0) > 0);
-    else if (watched === 'unwatched') items = items.filter((m) => (m.plexViewerUserIds?.length ?? 0) === 0);
+    items = this.applyWatchedFilter(this.applyAvailabilityFilter(items));
     return this.applySort(items);
   });
 
@@ -136,10 +133,7 @@ export class LibraryComponent {
     let items = [...this.library.shows()];
     const q = this.searchQuery().trim().toLowerCase();
     if (q) items = items.filter((s) => s.title.toLowerCase().includes(q));
-    items = this.applyAvailabilityFilter(items);
-    const watched = this.watchedFilter();
-    if (watched === 'watched') items = items.filter((s) => (s.plexWatchedEpisodes ?? 0) > 0);
-    else if (watched === 'unwatched') items = items.filter((s) => (s.plexWatchedEpisodes ?? 0) === 0);
+    items = this.applyWatchedFilter(this.applyAvailabilityFilter(items));
     return this.applySort(items);
   });
 
@@ -233,6 +227,16 @@ export class LibraryComponent {
     if (event.target !== event.currentTarget || event.propertyName !== 'transform') return;
     // Back at the list — drop the detail content so it isn't kept warm forever.
     if (this.selectedId() === null) this.displayedId.set(null);
+  }
+
+  // "Watched" means watched by at least one counted user — the same viewers as the card's ring,
+  // for movies and shows alike (shows: last episode of the last visible season).
+  private applyWatchedFilter<T extends { plexViewerUserIds: number[] | null }>(items: T[]): T[] {
+    const watched = this.watchedFilter();
+    const hasViewers = (item: T) => (item.plexViewerUserIds?.length ?? 0) > 0;
+    if (watched === 'watched') return items.filter(hasViewers);
+    if (watched === 'unwatched') return items.filter((item) => !hasViewers(item));
+    return items;
   }
 
   private applyAvailabilityFilter<T extends { sizeOnDisk: number }>(items: T[]): T[] {
