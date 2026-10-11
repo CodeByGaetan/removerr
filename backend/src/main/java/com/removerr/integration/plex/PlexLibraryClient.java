@@ -18,6 +18,7 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientRequestException;
 import reactor.core.publisher.Mono;
 import reactor.netty.http.client.HttpClient;
 
@@ -86,29 +87,33 @@ public class PlexLibraryClient {
     // Newest first: past the limit, the oldest views are the ones dropped. Ascending order
     // would drop the recent ones and make freshly watched items look safe to delete.
     public List<PlexHistoryEntry> getViewHistory(int limit) {
-        PlexHistoryContainer response = client.get()
-                .uri(serverUrl() + "/status/sessions/history/all?sort=viewedAt:desc" +
-                     "&X-Plex-Container-Start=0&X-Plex-Container-Size=" + limit)
-                .header("X-Plex-Token", ownerToken())
-                .retrieve()
-                .onStatus(HttpStatusCode::is4xxClientError, resp ->
-                        Mono.error(new IntegrationException("Plex auth error " + resp.statusCode())))
-                .bodyToMono(PlexHistoryContainer.class)
-                .block();
+        PlexHistoryContainer response = fetch("/status/sessions/history/all?sort=viewedAt:desc"
+                + "&X-Plex-Container-Start=0&X-Plex-Container-Size=" + limit, PlexHistoryContainer.class);
         if (response == null || response.mediaContainer() == null) return List.of();
         var entries = response.mediaContainer().metadata();
         return entries != null ? entries : List.of();
     }
 
     private PlexMediaContainer get(String path) {
-        return client.get()
-                .uri(serverUrl() + path)
-                .header("X-Plex-Token", ownerToken())
-                .retrieve()
-                .onStatus(HttpStatusCode::is4xxClientError, resp ->
-                        Mono.error(new IntegrationException("Plex auth error " + resp.statusCode())))
-                .bodyToMono(PlexMediaContainer.class)
-                .block();
+        return fetch(path, PlexMediaContainer.class);
+    }
+
+    // Every failure — HTTP error or Plex unreachable (off, restarting, timeout) — becomes an
+    // IntegrationException, which the library treats as "Plex data unavailable" instead of
+    // failing the whole page.
+    private <T> T fetch(String path, Class<T> responseType) {
+        try {
+            return client.get()
+                    .uri(serverUrl() + path)
+                    .header("X-Plex-Token", ownerToken())
+                    .retrieve()
+                    .onStatus(HttpStatusCode::isError, resp ->
+                            Mono.error(new IntegrationException("Plex request failed: HTTP " + resp.statusCode().value())))
+                    .bodyToMono(responseType)
+                    .block();
+        } catch (WebClientRequestException e) {
+            throw new IntegrationException("Plex server unreachable: " + e.getMessage(), e);
+        }
     }
 
     private String serverUrl() {
