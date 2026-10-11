@@ -3,6 +3,7 @@ package com.removerr.library;
 import com.removerr.integration.IntegrationException;
 import com.removerr.integration.ServiceNotConfiguredException;
 import com.removerr.integration.seerr.SeerrClient;
+import com.removerr.integration.seerr.dto.SeerrRequest;
 import com.removerr.integration.plex.PlexLibraryClient;
 import com.removerr.integration.plex.dto.PlexHistoryEntry;
 import com.removerr.integration.plex.dto.PlexMetadata;
@@ -294,7 +295,8 @@ public class MediaAggregationService {
     private Map<Integer, SeerrInfo> fetchSeerrMovieMap() {
         try {
             return seerrClient.getAllRequests().stream()
-                    .filter(r -> "movie".equals(r.type()) && r.media() != null && r.requestedBy() != null)
+                    .filter(r -> SeerrRequest.MOVIE.equals(r.type()) && r.media() != null
+                              && r.media().tmdbId() != null && r.requestedBy() != null)
                     .collect(Collectors.toMap(
                             r -> r.media().tmdbId(),
                             r -> new SeerrInfo(r.id(), r.requestedBy().displayName(),
@@ -303,6 +305,10 @@ public class MediaAggregationService {
                     ));
         } catch (ServiceNotConfiguredException e) {
             log.info("Seerr not configured — skipping movie request enrichment");
+            return Map.of();
+        } catch (IntegrationException e) {
+            // Seerr only adds "requested by": an outage must not take the library down.
+            log.warn("Seerr call failed — skipping movie request enrichment: {}", e.getMessage());
             return Map.of();
         }
     }
@@ -332,7 +338,7 @@ public class MediaAggregationService {
     private Map<Integer, SeerrInfo> fetchSeerrShowMap() {
         try {
             return seerrClient.getAllRequests().stream()
-                    .filter(r -> "tv".equals(r.type()) && r.media() != null
+                    .filter(r -> SeerrRequest.TV.equals(r.type()) && r.media() != null
                               && r.media().tvdbId() != null && r.requestedBy() != null)
                     .collect(Collectors.toMap(
                             r -> r.media().tvdbId(),
@@ -342,6 +348,9 @@ public class MediaAggregationService {
                     ));
         } catch (ServiceNotConfiguredException e) {
             log.info("Seerr not configured — skipping show request enrichment");
+            return Map.of();
+        } catch (IntegrationException e) {
+            log.warn("Seerr call failed — skipping show request enrichment: {}", e.getMessage());
             return Map.of();
         }
     }
