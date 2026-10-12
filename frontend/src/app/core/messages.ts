@@ -20,6 +20,8 @@ export const messages = {
   settings: {
     saved: 'Paramètres sauvegardés',
     saveError: 'Erreur lors de la sauvegarde',
+    plexUrlOwnerOnly: "Seul le propriétaire peut changer l'URL du serveur Plex",
+    reenterApiKey: "Ressaisissez la clé API du service dont vous changez l'URL",
     testError: 'Erreur lors du test',
   },
   users: {

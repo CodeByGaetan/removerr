@@ -1,7 +1,9 @@
 import { NgTemplateOutlet } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { forkJoin, timer } from 'rxjs';
 import { ConnectionTestResult, SaveSettingsRequest, SettingsService } from '../../../core/api/settings.service';
+import { AuthService } from '../../../core/auth/auth.service';
 import { LeaveConfirmable } from '../../../core/guards/unsaved-changes.guard';
 import { messages } from '../../../core/messages';
 import { ToastService } from '../../../core/services/toast.service';
@@ -18,6 +20,9 @@ import { ConfirmModalComponent } from '../../../shared/components/confirm-modal/
 export class ServicesSettingsComponent implements LeaveConfirmable {
   private settingsService = inject(SettingsService);
   private toast = inject(ToastService);
+
+  // The owner's plex.tv token goes to this URL: the backend only lets the owner change it.
+  readonly canEditPlexUrl = inject(AuthService).isOwner;
 
   readonly loading = this.settingsService.loading;
 
@@ -117,11 +122,17 @@ export class ServicesSettingsComponent implements LeaveConfirmable {
         this.settingsService.load();
         this.saving.set(false);
       },
-      error: () => {
-        this.toast.show(messages.settings.saveError, 'error');
+      error: (err: HttpErrorResponse) => {
+        this.toast.show(this.saveErrorMessage(err), 'error');
         this.saving.set(false);
       },
     });
+  }
+
+  private saveErrorMessage(err: HttpErrorResponse): string {
+    if (err.status === 403) return messages.settings.plexUrlOwnerOnly;
+    if (err.status === 400 && err.error?.code === 'BAD_REQUEST') return messages.settings.reenterApiKey;
+    return messages.settings.saveError;
   }
 
   onTest() {

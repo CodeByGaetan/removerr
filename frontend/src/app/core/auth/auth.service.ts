@@ -28,6 +28,7 @@ export interface PollPinResponse {
 export class AuthService {
   readonly me = signal<User | null>(null);
   readonly isAdmin = computed(() => this.me()?.admin ?? false);
+  readonly isOwner = computed(() => this.me()?.owner ?? false);
   readonly loading = signal<boolean>(false);
 
   constructor(private http: HttpClient, private router: Router) {}

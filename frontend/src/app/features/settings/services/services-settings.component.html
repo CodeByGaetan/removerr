@@ -63,9 +63,13 @@
       <input
         [value]="plexUrl()"
         (input)="plexUrl.set($any($event.target).value)"
+        [disabled]="!canEditPlexUrl()"
         placeholder="http://192.168.1.x:32400"
-        class="w-full px-3 py-2.25 rounded-lg bg-white/6 border border-white/10 text-white font-sans text-[13px] outline-none"
+        class="w-full px-3 py-2.25 rounded-lg bg-white/6 border border-white/10 text-white font-sans text-[13px] outline-none disabled:text-white/45 disabled:cursor-not-allowed"
       />
+      @if (!canEditPlexUrl()) {
+        <div class="mt-1.5 text-[11px] text-white/45">Modifiable uniquement par le propriétaire</div>
+      }
     </label>
   </div>
 
