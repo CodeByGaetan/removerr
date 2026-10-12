@@ -42,8 +42,12 @@ class AuthServiceTest {
             new AuthService(plexClient, repository, encryptor, jwtService, plexUserService,
                     mock(PlatformTransactionManager.class), mock(PlexLibraryClient.class));
 
+    private String nonce;
+
     @BeforeEach
     void setUp() {
+        when(plexClient.createPin()).thenReturn(new PlexPin(PIN_ID, "code", null, null));
+        nonce = authService.createPin().nonce();
         when(plexClient.checkPin(PIN_ID)).thenReturn(new PlexPin(PIN_ID, "code", TOKEN, null));
         when(plexClient.getUserInfo(TOKEN)).thenReturn(ACCOUNT);
         when(repository.findByPlexTvId(ACCOUNT.id())).thenReturn(Optional.empty());
@@ -88,7 +92,7 @@ class AuthServiceTest {
         when(repository.existsByOwnerTrue()).thenReturn(true);
         when(plexUserService.findLoginCandidate(ACCOUNT.id())).thenReturn(Optional.of(synced));
 
-        assertThatThrownBy(() -> authService.pollPin(PIN_ID)).isInstanceOf(LoginDeniedException.class);
+        assertThatThrownBy(() -> authService.pollPin(PIN_ID, nonce)).isInstanceOf(LoginDeniedException.class);
         assertThat(synced.getPlexTvId()).isNull();
         verify(repository, never()).save(any());
     }
@@ -97,7 +101,7 @@ class AuthServiceTest {
     void unknownAccount_isDenied() {
         when(repository.existsByOwnerTrue()).thenReturn(true);
 
-        assertThatThrownBy(() -> authService.pollPin(PIN_ID)).isInstanceOf(LoginDeniedException.class);
+        assertThatThrownBy(() -> authService.pollPin(PIN_ID, nonce)).isInstanceOf(LoginDeniedException.class);
         verify(repository, never()).save(any());
     }
 
@@ -107,11 +111,37 @@ class AuthServiceTest {
         revoked.setPlexTvId(ACCOUNT.id());
         when(repository.findByPlexTvId(ACCOUNT.id())).thenReturn(Optional.of(revoked));
 
-        assertThatThrownBy(() -> authService.pollPin(PIN_ID)).isInstanceOf(LoginDeniedException.class);
+        assertThatThrownBy(() -> authService.pollPin(PIN_ID, nonce)).isInstanceOf(LoginDeniedException.class);
+    }
+
+    @Test
+    void pollFromAnotherBrowser_isExpiredAndNeverReachesPlex() {
+        assertThat(authService.pollPin(PIN_ID, "stolen-or-missing").response().status())
+                .isEqualTo(PollPinResponse.Status.EXPIRED);
+        assertThat(authService.pollPin(PIN_ID, null).response().status())
+                .isEqualTo(PollPinResponse.Status.EXPIRED);
+        verify(plexClient, never()).checkPin(anyLong());
+    }
+
+    @Test
+    void unknownPin_isExpiredAndNeverReachesPlex() {
+        assertThat(authService.pollPin(PIN_ID + 1, nonce).response().status())
+                .isEqualTo(PollPinResponse.Status.EXPIRED);
+        verify(plexClient, never()).checkPin(anyLong());
+    }
+
+    @Test
+    void approvedPin_givesASingleSession() {
+        when(repository.existsByOwnerTrue()).thenReturn(false);
+
+        assertThat(authService.pollPin(PIN_ID, nonce).response().status())
+                .isEqualTo(PollPinResponse.Status.SUCCESS);
+        assertThat(authService.pollPin(PIN_ID, nonce).response().status())
+                .isEqualTo(PollPinResponse.Status.EXPIRED);
     }
 
     private PlexUser login() {
-        AuthService.PollResult result = authService.pollPin(PIN_ID);
+        AuthService.PollResult result = authService.pollPin(PIN_ID, nonce);
         assertThat(result.response().status()).isEqualTo(PollPinResponse.Status.SUCCESS);
         ArgumentCaptor<PlexUser> saved = ArgumentCaptor.forClass(PlexUser.class);
         verify(repository).save(saved.capture());

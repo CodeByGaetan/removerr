@@ -14,8 +14,15 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.SecureRandom;
+import java.time.Duration;
 import java.time.Instant;
+import java.util.Base64;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class AuthService {
@@ -27,6 +34,13 @@ public class AuthService {
     private final PlexUserService plexUserService;
     private final TransactionTemplate txTemplate;
     private final PlexLibraryClient plexLibraryClient;
+
+    // Plex PIN ids are sequential and polling only needs the id: the server-side nonce, also
+    // held in the creating browser's cookie, is what proves the poll comes from that browser.
+    // In memory on purpose: a pending login doesn't need to survive a restart.
+    static final Duration PIN_TTL = Duration.ofMinutes(30);
+    private static final SecureRandom RANDOM = new SecureRandom();
+    private final Map<Long, PendingPin> pendingPins = new ConcurrentHashMap<>();
 
     public AuthService(PlexAuthClient plexClient, PlexUserRepository plexUserRepository,
                        AesGcmEncryptor encryptor, JwtService jwtService, PlexUserService plexUserService,
@@ -40,18 +54,32 @@ public class AuthService {
         this.plexLibraryClient = plexLibraryClient;
     }
 
-    public CreatePinResponse createPin() {
+    public record PinStart(CreatePinResponse response, String nonce) {}
+
+    public PinStart createPin() {
         PlexPin pin = plexClient.createPin();
-        return new CreatePinResponse(pin.id(), pin.code(), plexClient.buildAuthUrl(pin.code()));
+        forgetExpiredPins();
+        String nonce = newNonce();
+        pendingPins.put(pin.id(), new PendingPin(nonce, Instant.now().plus(PIN_TTL)));
+        return new PinStart(new CreatePinResponse(pin.id(), pin.code(), plexClient.buildAuthUrl(pin.code())), nonce);
     }
 
     // Not @Transactional: polled every 2s during login, and a transaction would hold the single
     // SQLite connection across the plex.tv calls. Only the DB part runs in one.
-    public PollResult pollPin(long pinId) {
-        PlexPin pin = plexClient.checkPin(pinId);
+    public PollResult pollPin(long pinId, String nonce) {
+        // Unknown pin, wrong browser or expired: same answer, and plex.tv isn't even asked, so the
+        // endpoint reveals nothing about which (sequential) pin ids belong to this instance.
+        PendingPin pending = pendingPins.get(pinId);
+        if (pending == null || !pending.matches(nonce)) return PollResult.expired();
 
-        if (pin == null) return PollResult.expired();
+        PlexPin pin = plexClient.checkPin(pinId);
+        if (pin == null) {
+            pendingPins.remove(pinId);
+            return PollResult.expired();
+        }
         if (pin.authToken() == null) return PollResult.pending();
+        // Single use: a replayed or concurrent poll of an approved pin gets no second session.
+        if (!pendingPins.remove(pinId, pending)) return PollResult.expired();
 
         PlexUserAccount info = plexClient.getUserInfo(pin.authToken());
         PollResult result = txTemplate.execute(status -> {
@@ -63,6 +91,25 @@ public class AuthService {
         // After commit, so a concurrent read can't cache the token being replaced.
         plexLibraryClient.forgetOwnerToken();
         return result;
+    }
+
+    private void forgetExpiredPins() {
+        Instant now = Instant.now();
+        pendingPins.values().removeIf(p -> p.expiresAt().isBefore(now));
+    }
+
+    private static String newNonce() {
+        byte[] bytes = new byte[32];
+        RANDOM.nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
+    private record PendingPin(String nonce, Instant expiresAt) {
+        boolean matches(String candidate) {
+            return candidate != null && Instant.now().isBefore(expiresAt)
+                    && MessageDigest.isEqual(nonce.getBytes(StandardCharsets.UTF_8),
+                                             candidate.getBytes(StandardCharsets.UTF_8));
+        }
     }
 
     public MeResponse getMe(Long userId) {

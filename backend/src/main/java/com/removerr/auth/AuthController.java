@@ -20,17 +20,22 @@ public class AuthController {
     }
 
     @PostMapping("/api/auth/plex/pin")
-    public CreatePinResponse createPin() {
-        return authService.createPin();
+    public CreatePinResponse createPin(HttpServletResponse response) {
+        AuthService.PinStart start = authService.createPin();
+        response.addCookie(authCookies.withPinNonce(start.nonce()));
+        return start.response();
     }
 
     @GetMapping("/api/auth/plex/pin/{pinId}")
     public ResponseEntity<PollPinResponse> pollPin(@PathVariable long pinId,
+                                                   @CookieValue(name = AuthCookieFactory.PIN_COOKIE_NAME, required = false)
+                                                   String pinNonce,
                                                    HttpServletResponse response) {
-        AuthService.PollResult result = authService.pollPin(pinId);
+        AuthService.PollResult result = authService.pollPin(pinId, pinNonce);
 
         if (result.response().status() == PollPinResponse.Status.SUCCESS) {
             response.addCookie(authCookies.withToken(result.jwt()));
+            response.addCookie(authCookies.clearedPinNonce());
         }
 
         return ResponseEntity.ok(result.response());
@@ -42,7 +47,7 @@ public class AuthController {
         return ResponseEntity.noContent().build();
     }
 
-    // Protected by Spring Security (requires ROLE_ADMIN)
+    // Protected by Spring Security (USER or ADMIN)
     @GetMapping("/api/me")
     public MeResponse me(@AuthenticationPrincipal Long userId) {
         return authService.getMe(userId);
