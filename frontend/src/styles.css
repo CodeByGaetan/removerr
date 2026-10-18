@@ -54,6 +54,11 @@
 }
 
 @layer base {
+  html {
+    color-scheme: dark;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  }
+
   html,
   body {
     height: 100%;
