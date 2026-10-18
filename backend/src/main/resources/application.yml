@@ -51,8 +51,8 @@ server:
   servlet:
     context-path: /
   error:
-    include-message: always
-    include-binding-errors: always
+    include-message: never
+    include-binding-errors: never
 
 removerr:
   jwt:
