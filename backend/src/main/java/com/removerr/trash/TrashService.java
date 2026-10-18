@@ -244,7 +244,8 @@ public class TrashService {
                 item.getYear(), item.getPosterUrl(),
                 item.getSizeBytes(), item.getTrashedAt(), item.getPurgeAt(),
                 item.getSeerrRequestedBy(),
-                item.getTrashedBy().getId()
+                item.getTrashedBy().getId(),
+                item.getTrashedBy().getName()
         );
     }
 }

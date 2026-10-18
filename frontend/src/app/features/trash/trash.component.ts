@@ -3,7 +3,6 @@ import { TrashItem, TrashService } from '../../core/api/trash.service';
 import { ToastService } from '../../core/services/toast.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { FileSizePipe } from '../../core/pipes/file-size.pipe';
-import { RelativeDatePipe } from '../../core/pipes/relative-date.pipe';
 import { messages } from '../../core/messages';
 import { MS_PER_DAY } from '../../core/util/date.util';
 import { ConfirmModalComponent } from '../../shared/components/confirm-modal/confirm-modal.component';
@@ -11,7 +10,7 @@ import { ConfirmModalComponent } from '../../shared/components/confirm-modal/con
 @Component({
   selector: 'app-trash',
   standalone: true,
-  imports: [FileSizePipe, RelativeDatePipe, ConfirmModalComponent],
+  imports: [FileSizePipe, ConfirmModalComponent],
   templateUrl: './trash.component.html',
   styleUrl: './trash.component.css',
 })

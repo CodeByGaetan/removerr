@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Set;
 
 public interface TrashItemRepository extends JpaRepository<TrashItem, Long> {
+    @Query("SELECT t FROM TrashItem t JOIN FETCH t.trashedBy ORDER BY t.trashedAt DESC")
     List<TrashItem> findAllByOrderByTrashedAtDesc();
 
     @Query("SELECT t FROM TrashItem t WHERE t.purgeAt <= :now")

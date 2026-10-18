@@ -114,11 +114,13 @@
               {{ item.title }}
             </div>
 
-            <div class="flex flex-wrap gap-3 text-[11px] font-mono text-white/45">
-              <span>{{ item.sizeBytes | fileSize }}</span>
-              <span>mis en corbeille {{ item.trashedAt | relativeDate }}</span>
+            <div class="text-[11px] font-mono text-white/45 mb-1">
+              {{ item.sizeBytes | fileSize }}
+            </div>
+            <div class="text-[11px] font-mono text-white/45">
+              mis en corbeille par {{ item.trashedByName }}
               @if (item.seerrRequestedBy) {
-                <span>demandé par {{ item.seerrRequestedBy }}</span>
+                · demandé par {{ item.seerrRequestedBy }}
               }
             </div>
           </div>

@@ -13,5 +13,6 @@ public record TrashItemResponse(
         String trashedAt,
         String purgeAt,
         String seerrRequestedBy,
-        Long trashedByUserId
+        Long trashedByUserId,
+        String trashedByName
 ) {}

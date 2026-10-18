@@ -16,6 +16,7 @@ export interface TrashItem {
   purgeAt: string;
   seerrRequestedBy: string | null;
   trashedByUserId: number;
+  trashedByName: string;
 }
 
 export interface PurgeResult {
