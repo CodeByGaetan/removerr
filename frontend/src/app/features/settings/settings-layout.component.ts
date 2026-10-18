@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { APP_VERSION } from '../../shared/app-version';
 
 interface SettingsTab {
   label: string;
@@ -20,4 +21,5 @@ const TABS: SettingsTab[] = [
 })
 export class SettingsLayoutComponent {
   readonly tabs = TABS;
+  readonly version = APP_VERSION;
 }

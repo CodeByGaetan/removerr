@@ -5,7 +5,7 @@ COPY frontend/package*.json ./
 RUN npm ci
 COPY frontend/ ./
 # Bake the release version (passed via --build-arg VERSION) into the bundle.
-ARG VERSION=0.0.0-local
+ARG VERSION=dev
 RUN printf "export const environment = {\n  version: '%s',\n};\n" "$VERSION" \
     > src/environments/environment.ts
 RUN npm run build -- --configuration=production

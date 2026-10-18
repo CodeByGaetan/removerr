@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { Subscription, interval } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { GlassBackdropComponent } from '../../layout/glass-backdrop.component';
-import { environment } from '../../../environments/environment';
+import { APP_VERSION } from '../../shared/app-version';
 
 type LoginState = 'idle' | 'pending' | 'expired' | 'denied';
 
@@ -19,8 +19,7 @@ export class LoginComponent {
   private auth = inject(AuthService);
   private router = inject(Router);
 
-  // Tags ship without the `v` prefix; add it for display.
-  readonly version = `v${environment.version}`;
+  readonly version = APP_VERSION;
 
   state = signal<LoginState>('idle');
   loading = signal<boolean>(false);
